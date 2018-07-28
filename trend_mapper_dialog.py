@@ -40,3 +40,55 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
         self.iface = iface
+        
+    def getInputVectorLayer(self):
+        '''return vector layer from combo box for 
+        analysis input
+        returns string'''
+        pass
+        
+    def getCategoryCombo(self):
+        '''get category choice from combo box,
+        this is the unique values for regression analysis.
+        returns string'''
+        pass
+        
+    def getXFieldCombo(self):
+        '''get data column name for independent variable
+        for regression analysis
+        returns string'''
+        pass
+        
+    def getYFieldCombo(self):
+        '''get data column for dependent variable in 
+        regresison analysis
+        returns string'''
+        pass
+        
+    def getDiscardBadFitOption(self):
+        '''get checkbox status from Discard Bad Fit box.
+        returns boolean'''
+        pass
+        
+    def getExportRisidualsOption(self):
+        '''returns Export Riduals choice.
+            returns boolean'''
+        pass
+        
+    def getFilterOutliersOption(self):
+        '''Get choice for filtering outliers check box.
+        returns boolean'''
+        pass
+        
+    def getThresholdValue(self):
+        '''Gets the value for threshold input in regression
+        analysis filter option. The number is the multiple of 
+        standard deviations for outlier filter.
+        returns float or int'''
+        pass
+        
+    def getOutputLayerName(self):
+        '''gets the name for the output layer from the 
+        outputlayer line edit.
+        returns string'''
+        pass
