@@ -40,8 +40,10 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
         self.iface = iface
+        self.InputLayerCombo.currentIndexChanged.connect(
+                                        self.setLayerAttributesCombos)
         
-    def getInputVectorLayer(self):
+    def getInputLayer(self):
         '''return vector layer from combo box for 
         analysis input
         returns string'''
@@ -91,4 +93,26 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         '''gets the name for the output layer from the 
         outputlayer line edit.
         returns string'''
+        pass
+        
+    def setLayerInputCombo(self, layerlist):
+        '''Get a list of available layers from 
+        parent.'''
+        pass
+
+    def setLayerAttributesCombos(self):
+        '''Updates the three combo boxes for catagory, x and y
+        fields with the availbe attribute columns from selected
+        layer. Called after selection has been made on InputVectorCombo.
+         
+         Note: this uses iface directly to get attribute list from
+         layer. I would like to use dependency injection or something
+         to try to remove this class's dependency on iface interface.'''
+         pass
+         
+    def outputMessage(self, message):
+        ''' Take text data from analysis output an display to 
+        the user. Unsure as yet whether to us popup or messagebox on
+        different tab with save option'''
+        
         pass
