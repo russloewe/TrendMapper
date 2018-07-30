@@ -49,7 +49,7 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         returns string'''
         pass
         
-    def getCategoryCombo(self):
+    def getCatagoryCombo(self):
         '''get category choice from combo box,
         this is the unique values for regression analysis.
         returns string'''
@@ -108,6 +108,14 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
          Note: this uses iface directly to get attribute list from
          layer. I would like to use dependency injection or something
          to try to remove this class's dependency on iface interface.'''
+         pass
+         
+    def setAttributeComboCallback(self, callback_function):
+        '''recieves a function to connect with the
+         InputLayerCombo.currentIndexChanged connection. I'm
+         doing this so that all iface stuff can be located in the
+         main python file so that this class only has to pass and recieve
+         data.'''
          pass
          
     def outputMessage(self, message):
