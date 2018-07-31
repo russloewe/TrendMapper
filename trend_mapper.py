@@ -133,7 +133,7 @@ class TrendMapper:
         """
 
         # Create the dialog (after translation) and keep reference
-        self.dlg = TrendMapperDialog(self.iface)
+        self.dlg = TrendMapperDialog()
 
         icon = QIcon(icon_path)
         action = QAction(icon, text, parent)
