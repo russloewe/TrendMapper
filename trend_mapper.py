@@ -209,6 +209,14 @@ class TrendMapper:
         # Run the dialog event loop
         result = self.dlg.exec_()
         # See if OK was pressed
+        
+        
+        layers = self.iface.legendInterface().layers()
+        allLayers = [layer for layer in layers if layer.type() == 0]
+        self.dlg.setLayerInputCombo([layer.name() for layer in allLayers])
+        
+        #pass the callback function for updating combos
+        self.dlg.setAttributeComboCallback(self.updateAttributeCombos)
         if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
