@@ -179,6 +179,28 @@ class TrendMapper:
         # remove the toolbar
         del self.toolbar
 
+    def updateAttributeCombos(self):
+        '''this is the callback function that gets called by the 
+        dialoge class when it needs the attribute data for a layer 
+        when the combo index is changed'''
+        
+        #grab the selected layer from the dialog class
+        layerName = self.dlg.getInputLayer()
+        if len(layer) > 0:
+            allLayers = self.iface.legendInterface().layers()
+            try:
+                layer = [lyr.name() for lyr in allLayers].index(layerName)
+            except:
+                #pop up a message
+                pass
+            try:
+                fields = layer.pendindFields()
+            except:
+                #pop up different message box
+                pass
+            self.setLayerAttributesCombos([field.name() for field in fields])
+            
+            
 
     def run(self):
         """Run method that performs all the real work"""

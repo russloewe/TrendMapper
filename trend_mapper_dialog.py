@@ -30,7 +30,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 
 class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
-    def __init__(self, iface, parent=None):
+    def __init__(self, parent=None):
         """Constructor."""
         super(TrendMapperDialog, self).__init__(parent)
         # Set up the user interface from Designer.
@@ -39,9 +39,7 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
-        self.iface = iface
-        self.InputLayerCombo.currentIndexChanged.connect(
-                                        self.setLayerAttributesCombos)
+        
         
     def getInputLayer(self):
         '''return vector layer from combo box for 
@@ -100,7 +98,7 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         parent.'''
         pass
 
-    def setLayerAttributesCombos(self):
+    def setLayerAttributesCombos(self, inputList):
         '''Updates the three combo boxes for catagory, x and y
         fields with the availbe attribute columns from selected
         layer. Called after selection has been made on InputVectorCombo.
@@ -108,7 +106,7 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
          Note: this uses iface directly to get attribute list from
          layer. I would like to use dependency injection or something
          to try to remove this class's dependency on iface interface.'''
-         pass
+        pass
          
     def setAttributeComboCallback(self, callback_function):
         '''recieves a function to connect with the
@@ -116,7 +114,8 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
          doing this so that all iface stuff can be located in the
          main python file so that this class only has to pass and recieve
          data.'''
-         pass
+        self.InputLayerCombo.currentIndexChanged.connect(
+                                        callback_function)
          
     def outputMessage(self, message):
         ''' Take text data from analysis output an display to 
