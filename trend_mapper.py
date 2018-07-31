@@ -186,37 +186,31 @@ class TrendMapper:
         
         #grab the selected layer from the dialog class
         layerName = self.dlg.getInputLayer()
-        if len(layer) > 0:
+        if len(layerName) > 0:
             allLayers = self.iface.legendInterface().layers()
-            try:
-                layer = [lyr.name() for lyr in allLayers].index(layerName)
-            except:
-                #pop up a message
-                pass
-            try:
-                fields = layer.pendindFields()
-            except:
-                #pop up different message box
-                pass
-            self.setLayerAttributesCombos([field.name() for field in fields])
+            allLayerNames = [lyr.name() for lyr in allLayers]
+            layer_obj = allLayers[allLayerNames.index(layerName)]
+            fields = layer_obj.pendingFields()
+            self.dlg.setLayerAttributesCombos([field.name() for field in fields])
             
             
 
     def run(self):
         """Run method that performs all the real work"""
+        
+        layers = self.iface.legendInterface().layers()
+        allLayers = [layer for layer in layers if layer.type() == 0]
+        self.dlg.setLayerInputCombo([layer.name() for layer in allLayers])
+       #pass the callback function for updating combos
+        self.dlg.setAttributeComboCallback(self.updateAttributeCombos)
+        
+        
         # show the dialog
         self.dlg.show()
         # Run the dialog event loop
         result = self.dlg.exec_()
         # See if OK was pressed
         
-        
-        layers = self.iface.legendInterface().layers()
-        allLayers = [layer for layer in layers if layer.type() == 0]
-        self.dlg.setLayerInputCombo([layer.name() for layer in allLayers])
-        
-        #pass the callback function for updating combos
-        self.dlg.setAttributeComboCallback(self.updateAttributeCombos)
         if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
