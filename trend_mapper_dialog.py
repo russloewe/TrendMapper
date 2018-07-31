@@ -40,73 +40,85 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
         
-        
     def getInputLayer(self):
         '''return vector layer from combo box for 
         analysis input
         returns string'''
-        pass
+        return(unicode(self.inputLayerCombo.currentText()))
         
-    def getCatagoryCombo(self):
+    def getCategoryCombo(self):
         '''get category choice from combo box,
         this is the unique values for regression analysis.
         returns string'''
-        pass
+        return(unicode(self.categoryCombo.currentText()))
+        
         
     def getXFieldCombo(self):
         '''get data column name for independent variable
         for regression analysis
         returns string'''
-        pass
+        return(unicode(self.xFieldCombo.currentText()))
         
     def getYFieldCombo(self):
         '''get data column for dependent variable in 
         regresison analysis
         returns string'''
-        pass
+        return(unicode(self.yFieldCombo.currentText()))
         
     def getDiscardBadFitOption(self):
         '''get checkbox status from Discard Bad Fit box.
         returns boolean'''
-        pass
+        return(self.discardBadFitCheck.isChecked())
         
     def getExportRisidualsOption(self):
         '''returns Export Riduals choice.
             returns boolean'''
-        pass
+        return(self.exportRisidualsCheck.isChecked())
         
     def getFilterOutliersOption(self):
         '''Get choice for filtering outliers check box.
         returns boolean'''
-        pass
+        return(self.filterOutliersCheck.isChecked())
         
     def getThresholdValue(self):
         '''Gets the value for threshold input in regression
         analysis filter option. The number is the multiple of 
         standard deviations for outlier filter.
         returns float or int'''
-        pass
+        value = self.outlierThresholdLine.text()
+        try:
+            num_value = float(value)
+        except ValueError:
+            num_value = None
+        return num_value
         
     def getOutputLayerName(self):
         '''gets the name for the output layer from the 
         outputlayer line edit.
         returns string'''
-        pass
+        return(self.outputLayerLine.text())
         
-    def setLayerInputCombo(self, layerlist):
+    def setLayerInputCombo(self, layerList):
         '''Get a list of available layers from 
         parent.'''
-        pass
+        self.inputLayerCombo.clear()
+        for item in layerList:
+            self.inputLayerCombo.addItem(item)
 
     def setLayerAttributesCombos(self, inputList):
         '''Updates the three combo boxes for catagory, x and y
         fields with the availbe attribute columns from selected
         layer. Called after selection has been made on InputVectorCombo.
-         
-         Note: this uses iface directly to get attribute list from
-         layer. I would like to use dependency injection or something
-         to try to remove this class's dependency on iface interface.'''
-        pass
+        '''
+        self.categoryCombo.clear()
+        self.xFieldCombo.clear()
+        self.yFieldCombo.clear()
+        for item in inputList:
+            self.categoryCombo.addItem(item)
+            self.xFieldCombo.addItem(item)
+            self.yFieldCombo.addItem(item)
+            
+
          
     def setAttributeComboCallback(self, callback_function):
         '''recieves a function to connect with the
@@ -121,5 +133,6 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         ''' Take text data from analysis output an display to 
         the user. Unsure as yet whether to us popup or messagebox on
         different tab with save option'''
-        
+        self.msg = QtGui.QWidget()
+        QtGui.QMessageBox.question(self.msg, 'Message', message, QtGui.QMessageBox.Ok)
         pass
