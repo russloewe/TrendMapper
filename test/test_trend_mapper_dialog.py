@@ -54,15 +54,15 @@ class TrendMapperDialogTest(unittest.TestCase):
         testList = ['one', 'two', 'three']
         self.dialog.setLayerAttributesCombos(testList)
         for n in range(3):
-            self.assertEqual(self.dialog.CatagoryCombo.findText(testList[n]) >= 0, True)
-            self.assertEqual(self.dialog.XFieldCombo.findText(testList[n]) >= 0, True)
-            self.assertEqual(self.dialog.YFieldCombo.findText(testList[n]) >= 0, True)
+            self.assertEqual(self.dialog.categoryCombo.findText(testList[n]) >= 0, True)
+            self.assertEqual(self.dialog.xFieldCombo.findText(testList[n]) >= 0, True)
+            self.assertEqual(self.dialog.yFieldCombo.findText(testList[n]) >= 0, True)
         testList2 = ['four', 'five', 'six']
         self.dialog.setLayerAttributesCombos(testList2)
         for n in range(3):
-            self.assertEqual(self.dialog.CatagoryCombo.findText(testList[n]) < 0, True)
-            self.assertEqual(self.dialog.XFieldCombo.findText(testList[n]) < 0, True)
-            self.assertEqual(self.dialog.YFieldCombo.findText(testList[n]) < 0, True)
+            self.assertEqual(self.dialog.categoryCombo.findText(testList[n]) < 0, True)
+            self.assertEqual(self.dialog.xFieldCombo.findText(testList[n]) < 0, True)
+            self.assertEqual(self.dialog.yFieldCombo.findText(testList[n]) < 0, True)
 
     def test_setLayerInputCombo(self):
         '''same test as the attribute combo test but for the layer
@@ -70,36 +70,36 @@ class TrendMapperDialogTest(unittest.TestCase):
         testList = ['one', 'two', 'three']
         self.dialog.setLayerInputCombo(testList)
         for n in range(3):
-            self.assertEqual(self.dialog.CatagoryCombo.findText(testList[n]) >= 0, True)
+            self.assertEqual(self.dialog.inputLayerCombo.findText(testList[n]) >= 0, True)
         testList2 = ['four', 'five', 'six']
         self.dialog.setLayerInputCombo(testList2)
         for n in range(3):
-            self.assertEqual(self.dialog.CatagoryCombo.findText(testList[n]) < 0, True)
+            self.assertEqual(self.dialog.inputLayerCombo.findText(testList[n]) < 0, True)
 
     def test_getInputCombo(self):
         '''test that the right layer is returned for the getInputLayer '''
         testList = ['one', 'two', 'three']
         self.dialog.setLayerInputCombo(testList)
-        self.dialog.CatagoryCombo.setCurrentIndex(0) 
+        self.dialog.inputLayerCombo.setCurrentIndex(0) 
         self.assertEqual(self.dialog.getInputLayer(), 'one')
-        self.dialog.CatagoryCombo.setCurrentIndex(1) 
+        self.dialog.inputLayerCombo.setCurrentIndex(1) 
         self.assertEqual(self.dialog.getInputLayer(), 'two')
-        self.dialog.CatagoryCombo.setCurrentIndex(2) 
+        self.dialog.inputLayerCombo.setCurrentIndex(2) 
         self.assertEqual(self.dialog.getInputLayer(), 'three')
         
     def test_checkboxGetters(self):
         '''test all of the checkbox getter functions'''
-        self.dialog.DiscardBadFitCheck.setChecked(True)
-        self.dialog.FilterOutliersCheck.setChecked(True)
-        self.dialog.ExportRisidualsCheck.setChecked(True)
+        self.dialog.discardBadFitCheck.setChecked(True)
+        self.dialog.filterOutliersCheck.setChecked(True)
+        self.dialog.exportRisidualsCheck.setChecked(True)
         
         self.assertEqual(self.dialog.getDiscardBadFitOption(), True)
         self.assertEqual(self.dialog.getExportRisidualsOption(), True)
         self.assertEqual(self.dialog.getFilterOutliersOption(), True)
 
-        self.dialog.DiscardBadFitCheck.setChecked(False)
-        self.dialog.FilterOutliersCheck.setChecked(False)
-        self.dialog.ExportRisidualsCheck.setChecked(False)
+        self.dialog.discardBadFitCheck.setChecked(False)
+        self.dialog.filterOutliersCheck.setChecked(False)
+        self.dialog.exportRisidualsCheck.setChecked(False)
         
         self.assertEqual(self.dialog.getDiscardBadFitOption(), False)
         self.assertEqual(self.dialog.getExportRisidualsOption(), False)
@@ -107,14 +107,25 @@ class TrendMapperDialogTest(unittest.TestCase):
         
     def test_getThresholdValue(self):
         '''test that the threshold value is correct'''
-        self.dialog.OutlierThresholdLine.setText('2')
+        self.dialog.outlierThresholdLine.setText('2')
         self.assertEqual(self.dialog.getThresholdValue(), 2)
         
         
     def test_getOutputLayerName(self):
         '''check that the output layer name is correct'''
-        self.dialog.OutputLayerLine.setText('out.name')
+        self.dialog.outputLayerLine.setText('out.name')
         self.assertEqual(self.dialog.getOutputLayerName(), 'out.name')
+        
+    def test_comboGetters(self):
+        '''test the three functions that get the attributes for analysisi'''
+        self.dialog.setLayerAttributesCombos(['one', 'two', 'three'])
+        self.dialog.categoryCombo.setCurrentIndex(0)
+        self.dialog.xFieldCombo.setCurrentIndex(1)
+        self.dialog.yFieldCombo.setCurrentIndex(2)
+        self.assertEqual(self.dialog.getCategoryCombo(), 'one')
+        self.assertEqual(self.dialog.getXFieldCombo(), 'two')
+        self.assertEqual(self.dialog.getYFieldCombo(), 'three')
+        
 
 if __name__ == "__main__":
     suite = unittest.makeSuite(TrendMapperDialogTest)
