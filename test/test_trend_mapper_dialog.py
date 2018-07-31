@@ -40,6 +40,15 @@ class TrendMapperDialogTest(unittest.TestCase):
         button.click()
         result = self.dialog.result()
         self.assertEqual(result, QDialog.Accepted)
+        
+    def test_setAttributeCombos(self):
+        testList = ['one', 'two', 'three']
+        self.dialog.setLayerAttributesCombos(testList)
+        for n in range(3):
+            self.assertEqual(self.dialog.CatagoryCombo.findText(testList[n]) >= 0, True)
+        testList2 = ['four', 'five', 'six']
+        for n in range(3):
+            self.assertEqual(self.dialog.CatagoryCombo.findText(testList[n]) < 0, True)
 
     def test_dialog_cancel(self):
         """Test we can click cancel."""
@@ -52,4 +61,3 @@ if __name__ == "__main__":
     suite = unittest.makeSuite(TrendMapperDialogTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
-
