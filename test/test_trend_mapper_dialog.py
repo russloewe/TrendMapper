@@ -126,6 +126,16 @@ class TrendMapperDialogTest(unittest.TestCase):
         self.assertEqual(self.dialog.getXFieldCombo(), 'two')
         self.assertEqual(self.dialog.getYFieldCombo(), 'three')
         
+    def test_Callback(self):
+        '''test that the callback function works'''
+        self.test_number = 1
+        def callback_test():
+            self.test_number = 2
+        self.dialog.setAttributeComboCallback(callback_test)
+        self.dialog.setLayerInputCombo(['one', 'two', 'three'])
+        self.dialog.inputLayerCombo.setCurrentIndex(0)
+        self.dialog.inputLayerCombo.setCurrentIndex(1)
+        self.assertEqual(self.test_number, 2)
 
 if __name__ == "__main__":
     suite = unittest.makeSuite(TrendMapperDialogTest)
