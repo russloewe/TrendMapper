@@ -95,7 +95,7 @@
     <string>Filter Outliers</string>
    </property>
   </widget>
-  <widget class="QCheckBox" name="DiscardBadFItCheck">
+  <widget class="QCheckBox" name="DiscardBadFitCheck">
    <property name="geometry">
     <rect>
      <x>410</x>
@@ -106,19 +106,6 @@
    </property>
    <property name="text">
     <string>Discard Bad Regression</string>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="ShowWarningCheck">
-   <property name="geometry">
-    <rect>
-     <x>410</x>
-     <y>170</y>
-     <width>131</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Show Warnings</string>
    </property>
   </widget>
   <widget class="QLineEdit" name="OutlierThresholdLine">
