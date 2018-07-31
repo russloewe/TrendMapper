@@ -104,7 +104,17 @@ class TrendMapperDialogTest(unittest.TestCase):
         self.assertEqual(self.dialog.getDiscardBadFitOption(), False)
         self.assertEqual(self.dialog.getExportRisidualsOption(), False)
         self.assertEqual(self.dialog.getFilterOutliersOption(), False)
-    
+        
+    def test_getThresholdValue(self):
+        '''test that the threshold value is correct'''
+        self.dialog.OutlierThresholdLine.setText('2')
+        self.assertEqual(self.dialog.getThresholdValue(), 2)
+        
+        
+    def test_getOutputLayerName(self):
+        '''check that the output layer name is correct'''
+        self.dialog.OutputLayerLine.setText('out.name')
+        self.assertEqual(self.dialog.getOutputLayerName(), 'out.name')
 
 if __name__ == "__main__":
     suite = unittest.makeSuite(TrendMapperDialogTest)
