@@ -126,7 +126,7 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
          doing this so that all iface stuff can be located in the
          main python file so that this class only has to pass and recieve
          data.'''
-        self.InputLayerCombo.currentIndexChanged.connect(
+        self.inputLayerCombo.currentIndexChanged.connect(
                                         callback_function)
          
     def outputMessage(self, message):
