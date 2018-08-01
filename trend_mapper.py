@@ -45,7 +45,13 @@ class TrendMapper:
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
         # initialize locale
-        locale = QSettings().value('locale/userLocale')[0:2]
+        loc = QSettings().value('locale/userLocale')
+        print 'TrendMapper {}'.format(loc)
+        if loc is None:
+            locale = 'en'
+        else:
+            locale = loc[0:2]
+
         locale_path = os.path.join(
             self.plugin_dir,
             'i18n',
@@ -64,7 +70,10 @@ class TrendMapper:
         self.menu = self.tr(u'&TrendMapper')
         # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'TrendMapper')
-        self.toolbar.setObjectName(u'TrendMapper')
+        if self.toolbar == None:
+            pass
+        else:
+            self.toolbar.setObjectName(u'TrendMapper')
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -203,6 +212,7 @@ class TrendMapper:
         self.dlg.setLayerInputCombo([layer.name() for layer in allLayers])
        #pass the callback function for updating combos
         self.dlg.setAttributeComboCallback(self.updateAttributeCombos)
+        self.updateAttributeCombos()
         
         
         # show the dialog

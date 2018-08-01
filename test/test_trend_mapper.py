@@ -14,29 +14,36 @@ __copyright__ = 'Copyright 2018, Russell Loewe'
 
 import unittest
 
-from PyQt4.QtGui import QDialogButtonBox, QDialog
-
+from PyQt4.QtGui import QDialogButtonBox, QDialog, QWidget
 from trend_mapper import TrendMapper
 
+from qgis.gui import QgsMapCanvas
+from qgis_interface import QgisInterface
 from utilities import get_qgis_app
+from PyQt4.QtCore import QSettings
+
+
 QGIS_APP = get_qgis_app()
 
 
-class TrendMapperDialogTest(unittest.TestCase):
+class TrendMapperTest(unittest.TestCase):
     """Test dialog works."""
 
     def setUp(self):
         """Runs before each test."""
-        self.trendMapper = TrendMapperDialog(None)
+        self.iface = QgisInterface(QgsMapCanvas(QWidget()))
+        self.trendMapper = TrendMapper(self.iface)
 
     def tearDown(self):
         """Runs after each test."""
         self.trendMapper = None
-
-    
         
+    def test_attributeCallback(self):
+        '''see if calling the call back function gives errors'''
+      #  self.trendMapper.updateAttributeCombos()
+        pass
 
 if __name__ == "__main__":
-    suite = unittest.makeSuite(TrendMapperDialogTest)
+    suite = unittest.makeSuite(TrendMapperTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
