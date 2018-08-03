@@ -46,11 +46,7 @@ class TrendMapper:
         self.plugin_dir = os.path.dirname(__file__)
         # initialize locale
         loc = QSettings().value('locale/userLocale')
-        print 'TrendMapper {}'.format(loc)
-        if loc is None:
-            locale = 'en'
-        else:
-            locale = loc[0:2]
+        locale = loc[0:2]
 
         locale_path = os.path.join(
             self.plugin_dir,
