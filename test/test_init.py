@@ -14,6 +14,7 @@ import logging
 import ConfigParser
 
 LOGGER = logging.getLogger('QGIS')
+LOGGER.disabled = True
 
 
 class TestInit(unittest.TestCase):

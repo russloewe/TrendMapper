@@ -6,6 +6,7 @@ import logging
 
 
 LOGGER = logging.getLogger('QGIS')
+LOGGER.disabled = True
 QGIS_APP = None  # Static variable used to hold hand to running QGIS app
 CANVAS = None
 PARENT = None
