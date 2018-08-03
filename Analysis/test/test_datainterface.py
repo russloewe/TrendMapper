@@ -14,7 +14,7 @@ __copyright__ = 'Copyright 2018, Russell Loewe'
 
 import unittest
 
-from Analysis.datainterface import DataInterface
+from Analysis.data_interface import DataInterface
 
 
 class DataInterfaceTest(unittest.TestCase):
