@@ -27,12 +27,25 @@ class DataInterfaceTest(unittest.TestCase):
         self.interface.setCategoryLable('STATION')
         self.interface.setXLable('DATE')
         self.interface.setYLable('TAVG')
+        self.interface.addCopyAttributeLable('LATITUDE')
         self.interface.indexCSVFiles()
+        self.interface.indexCategories()
 
     def tearDown(self):
         """Runs after each test."""
         self.interface = None
         
+    def test_copyAttributes(self):
+        '''Make sure the copy attirbute lable loaded correctly'''
+        for f in self.interface.csvFiles:
+            if f.validLables:
+                self.assertTrue('LATITUDE' in f.indexDict.keys())
+    
+    def test_categoryIndexing(self):
+        '''Make sure the category indexer works'''
+        fcount = len(self.interface.cvsCategoryIndex['USR0000OECK'])
+        self.assertTrue(fcount == 3)
+            
     def test_loadFolder(self):
         '''Test load folder...'''
         fileList = self.interface.getCSVFileList(filterInvalid=False)
@@ -65,7 +78,7 @@ class DataInterfaceTest(unittest.TestCase):
         '''See if we can load a data set'''
         stations = self.interface.getCategoryList()
         for station in stations:
-            data = self.interface.getCategoryDataset(station.name)
+            data = self.interface.getCategoryDataset(station)
             self.assertTrue(data.name in stations)
             
 if __name__ == "__main__":

@@ -59,25 +59,24 @@ class DataInterface():
     
     def indexCategories(self):
         '''iterat through all the CSV files in the list,
-            read every line and record every unique name and return
-            a list of them'''
+            read every line and record every unique name and add to a 
+            dict that has the name and what files it was found in'''
         nameList = {}
         count = 0
-        for fileObj in [f for f in self.CSV if f.validLables]:
+        for fileObj in [f for f in self.csvFiles if f.validLables]:
             count += 1
-            fileName = fileObj.name
-            nameIndex = fileObj.getIndex(self.name)
+            fileName = fileObj.path
+            categoryIndex = fileObj.getIndex(self.categoryLable)
             with open(fileName, 'rb') as csvfile:
                 spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
                 for row in spamreader:
-                    nameVal = row[nameIndex]
-                    if nameVal == self.name:
-                        pass
-                    if nameVal not in nameList:
-                        nameList[nameVal] = [fileName]
-                    else:
-                        if fileName not in nameList[nameVal]:
-                            nameList[nameVal].append(fileName)
+                    catVal = row[categoryIndex]
+                    if catVal != self.categoryLable:
+                        if catVal not in nameList:
+                            nameList[catVal] = [fileName]
+                        else:
+                            if fileName not in nameList[catVal]:
+                                nameList[catVal].append(fileName)
         self.cvsCategoryIndex = nameList
         
     def getCategoryList(self):
@@ -90,9 +89,9 @@ class DataInterface():
     def getCategoryDataset(self, uniqueName):
         dataPoints = []
         dataObj = DataSeries(uniqueName)
-        for fileObj in [fil for fil in self.CSV if fil.name in self.cvsStationIndex[uniqueName]]:
-            fileName = fileObj.name
-            nameInd = fileObj.getIndex(self.name)
+        for fileObj in [fil for fil in self.csvFiles if fil.path in self.cvsCategoryIndex[uniqueName]]:
+            fileName = fileObj.path
+            nameInd = fileObj.getIndex(self.categoryLable)
             #print nameInd, uniqueName, fileName
            # print fileObj.indexDict
             
