@@ -27,6 +27,7 @@ class DataInterfaceTest(unittest.TestCase):
         self.interface.setCategoryLable('STATION')
         self.interface.setXLable('DATE')
         self.interface.setYLable('TAVG')
+        self.interface.indexCSVFiles()
 
     def tearDown(self):
         """Runs after each test."""
@@ -34,8 +35,10 @@ class DataInterfaceTest(unittest.TestCase):
         
     def test_loadFolder(self):
         '''Test load folder...'''
-        fileList = self.interface.getCSVFileList()
+        fileList = self.interface.getCSVFileList(filterInvalid=False)
         self.assertEqual(len(fileList) , 6)
+        fileList = self.interface.getCSVFileList(filterInvalid=True)
+        self.assertEqual(len(fileList) , 5)
         
     def test_lableSetters(self):
         '''See if we can set the x, y lables'''
@@ -45,12 +48,13 @@ class DataInterfaceTest(unittest.TestCase):
         
     def test_indexFiles(self):
         '''See if the file indexer works'''
-        pass
+        for f in self.interface.csvFiles:
+            if f.validLables:
+                self.assertTrue(len(f.indexDict) > 0)
         
     def test_FileCounts(self):
         '''See if the file counts work'''
         
-        self.interface.indexCSVFiles()
         allFiles = self.interface.getFileCountAll()
         validFiles = self.interface.getFileCountValid()
         
