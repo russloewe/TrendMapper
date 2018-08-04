@@ -1,8 +1,8 @@
 import csv
 import numpy
 from sets import Set
-from datainterface import DataInterface
-
+from Analysis.data_interface import DataInterface
+ 
 class Analysis():
     def __init__(self):
         '''The station dictionary uses the user inputted unique key as
