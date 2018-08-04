@@ -23,6 +23,10 @@ class DataInterfaceTest(unittest.TestCase):
     def setUp(self):
         """Runs before each test."""
         self.interface = DataInterface()
+        self.interface.loadFolder('./Analysis/test/')
+        self.interface.setCategoryLable('STATION')
+        self.interface.setXLable('DATE')
+        self.interface.setYLable('TAVG')
 
     def tearDown(self):
         """Runs after each test."""
@@ -30,9 +34,28 @@ class DataInterfaceTest(unittest.TestCase):
         
     def test_loadFolder(self):
         '''Test load folder...'''
-        self.interface.loadFolder('./test/')
         fileList = self.interface.getCSVFileList()
         self.assertEqual(len(fileList) , 6)
+        
+    def test_lableSetters(self):
+        '''See if we can set the x, y lables'''
+        self.assertEqual(self.interface.categoryLable, 'STATION')
+        self.assertEqual(self.interface.xLable, 'DATE')
+        self.assertEqual(self.interface.yLable, 'TAVG')
+        
+    def test_indexFiles(self):
+        '''See if the file indexer works'''
+        pass
+        
+    def test_FileCounts(self):
+        '''See if the file counts work'''
+        
+        self.interface.indexCSVFiles()
+        allFiles = self.interface.getFileCountAll()
+        validFiles = self.interface.getFileCountValid()
+        
+        self.assertEqual(allFiles, 6)
+        self.assertEqual(validFiles, 5)
 
 if __name__ == "__main__":
     suite = unittest.makeSuite(DataInterfaceTest)
