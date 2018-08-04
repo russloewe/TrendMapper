@@ -8,7 +8,7 @@ class DataInterface():
         self.csvFiles = []# list of csv file objects
         self.QGIS = []
         self.Arch = []
-        self.catagoryLable = None
+        self.categoryLable = None
         self.xLable = None
         self.yLable = None
         self.copyAttributeLables = []
@@ -41,8 +41,8 @@ class DataInterface():
                 fileList.append(f.path)
         return fileList
             
-    def setCatagoryLable(self, name):
-        self.name = name
+    def setCategoryLable(self, name):
+        self.categoryLable = name
         
     def setXLable(self, lable):
         self.xLable = lable
@@ -60,7 +60,6 @@ class DataInterface():
         '''iterat through all the CSV files in the list,
             read every line and record every unique name and return
             a list of them'''
-        #nameList = set([]) #set is so much faster
         nameList = {}
         count = 0
         for fileObj in [f for f in self.CSV if f.validLables]:
@@ -80,20 +79,6 @@ class DataInterface():
                             nameList[nameVal].append(fileName)
         self.cvsStationIndex = nameList
         return list(nameList)
-
-    def getNewCSVData(self):
-        #find first new name
-        nameNewStation = None
-        
-        for fileObj in self.CSV:
-            fileName = fileObj.name
-            with open(str(fileName), 'rb') as csvfile:
-                spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
-                for row in spamreader:
-                    try:
-                        stationName = row.index(self.name)                        
-                    except ValueError:
-                        pass
                     
         #call get csv name date
     def getCSVNameData(self, uniqueName):
@@ -123,25 +108,32 @@ class DataInterface():
                         #add copy data
         return dataObj
 
-    def getCSVCount(self):
+    def getFileCountAll(self):
         c = 0
-        for i in self.CSV:   
+        for i in self.csvFiles:   
             c += 1
+        return c
+        
+    def getFileCountValid(self):
+        c = 0
+        for i in self.csvFiles:
+            if i.validLables:
+                c += 1
         return c
         
     def indexCSVFiles(self):
         '''Takes array of the first line of CSV file and
             locates the indices of the three attribute columns
             we need for analysis'''
-        if (self.name == None) or (self.xLable == None) or (self.yLable == None):
+        if (self.categoryLable == None) or (self.xLable == None) or (self.yLable == None):
             raise ValueError('cant index files without lables set')
-        for fileObj in self.CSV:
-            fileName = fileObj.name
+        for fileObj in self.csvFiles:
+            fileName = fileObj.path
             with open(str(fileName), 'rb') as csvfile:
                 spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
                 for row in spamreader:
                     try:
-                        fileObj.addIndex(self.name, row.index(self.name))
+                        fileObj.addIndex(self.categoryLable, row.index(self.categoryLable))
                         fileObj.addIndex(self.xLable, row.index(self.xLable))
                         fileObj.addIndex(self.yLable, row.index(self.yLable))
                         for name in self.copyAttributeLables:
