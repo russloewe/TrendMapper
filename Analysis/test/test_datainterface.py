@@ -60,7 +60,14 @@ class DataInterfaceTest(unittest.TestCase):
         
         self.assertEqual(allFiles, 6)
         self.assertEqual(validFiles, 5)
-
+        
+    def test_getNameData(self):
+        '''See if we can load a data set'''
+        stations = self.interface.getCategoryList()
+        for station in stations:
+            data = self.interface.getCategoryDataset(station.name)
+            self.assertTrue(data.name in stations)
+            
 if __name__ == "__main__":
     suite = unittest.makeSuite(DataInterfaceTest)
     runner = unittest.TextTestRunner(verbosity=2)

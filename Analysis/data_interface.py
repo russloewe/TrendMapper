@@ -12,6 +12,7 @@ class DataInterface():
         self.xLable = None
         self.yLable = None
         self.copyAttributeLables = []
+        self.cvsCategoryIndex = {}
 
     
     def loadFolder(self, folderPath):
@@ -56,7 +57,7 @@ class DataInterface():
         
 
     
-    def getCSVNameList(self):
+    def indexCategories(self):
         '''iterat through all the CSV files in the list,
             read every line and record every unique name and return
             a list of them'''
@@ -77,11 +78,16 @@ class DataInterface():
                     else:
                         if fileName not in nameList[nameVal]:
                             nameList[nameVal].append(fileName)
-        self.cvsStationIndex = nameList
-        return list(nameList)
+        self.cvsCategoryIndex = nameList
+        
+    def getCategoryList(self):
+        catList = []
+        for station in list(self.cvsCategoryIndex.keys()):
+            catList.append(station)
+        return catList
                     
         #call get csv name date
-    def getCSVNameData(self, uniqueName):
+    def getCategoryDataset(self, uniqueName):
         dataPoints = []
         dataObj = DataSeries(uniqueName)
         for fileObj in [fil for fil in self.CSV if fil.name in self.cvsStationIndex[uniqueName]]:
@@ -154,7 +160,7 @@ class DataSeries():
         #stats 
         self.zScore = None
         self.risidualSum = None
-        
+
     def addDataPoint(self, xVal, yVal):
         try:
             xVal = float(xVal)
