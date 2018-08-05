@@ -35,6 +35,11 @@ class AnalysisTest(unittest.TestCase):
         self.interface.addCopyAttributeLable('LONGITUDE')
         self.interface.indexCSVFiles()
         self.interface.indexCategories()
+        self.testData = []
+        stations = self.interface.getCategoryList()
+        for station in stations:
+            data = self.interface.getCategoryDataset(station)
+            self.testData.append(data)
         
         self.analysis = Analysis()
     
@@ -61,6 +66,17 @@ class AnalysisTest(unittest.TestCase):
         self.assertEqual(result3['rank'], 2)
         
         self.assertEqual(result4['rank'], 1)
+        
+    def test_dataLinReg(self):
+        '''Test that analysis can process a dataSeries'''
+        data = self.testData[0]
+        data.dataPoints = [(x, x) for x in range(10)]
+        data1 = self.analysis.linearFitDataSeries(data)
+        
+        self.assertTrue(abs(data1.dataStats['slope'] - 1.0) < .0000001)
+        self.assertTrue(abs(data1.dataStats['intercept'] -0) < .0000001)
+        self.assertEqual(data1.dataStats['rank'], 2)
+        
 
         
     def tearDown(self):

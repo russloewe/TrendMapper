@@ -13,30 +13,6 @@ class Analysis():
         self.skipped_datapoints = 0
         self.row_count = 0
     
-    def find_linear_slope(self, station_data):
-        '''take an array of tuples, [(x1,y1), (x2,y2) ..., (xn,yn)]
-           reorganize as two arrays [x1, x2 ..., xn] and [y1, y2, ..., yn]
-           and use numpy polyfit to find linear best fit coeeficients and
-           return the first one which is slope, aka rate of change.
-           BTW, numpy doesn't care about point order'''
-        numpy.seterr(all='raise') #see if we can catch warnings
-        x = [] #init independent var array
-        y = [] #init dependent var array
-        for data_point in station_data:
-            x_val,y_val = data_point  #unpack tuple
-            x.append(x_val)
-            y.append(y_val)
-        if len(x) != len(y):
-            print "something went wrong, x y dim missmath"
-            return None
-        try:
-            A = numpy.vstack([x, numpy.ones(len(x))]).T
-            linear_fit = numpy.linalg.lstsq(A,y)
-            print linear_fit
-        except Warning:
-            print "rank error"
-        return linear_fit
-        
     def calculateLinearRegression(self, dataSet):
         '''take an array of tuples, [(x1,y1), (x2,y2) ..., (xn,yn)]
            reorganize as two arrays [x1, x2 ..., xn] and [y1, y2, ..., yn]
@@ -54,15 +30,20 @@ class Analysis():
         try:
             A = numpy.vstack([x, numpy.ones(len(x))]).T
             linearFitResult = numpy.linalg.lstsq(A,y)
-            print linearFitResult
-        except Warning:
+        except Warning:  #not sure why this is here or if it actually works
             print "rank error"
         slope, intercept = linearFitResult[0]
         rank = linearFitResult[2]
         results = {'slope' : slope, 'intercept': intercept, 'rank' : rank}
         return(results)
            
-
+    def linearFitDataSeries(self, dataSeries):
+        '''take the dataSeries object and run it through the regression
+        function and put the result into the dataSeries attributes'''
+        results = self.calculateLinearRegression(dataSeries.dataPoints)
+        for key in results:
+            dataSeries.addStat(key, results[key])
+        return(dataSeries)
 
     def calculate_linear_fit(self, discard_badfit = True):
         ''' call the linear fit equation and add name and results
