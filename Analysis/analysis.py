@@ -27,53 +27,46 @@ class Analysis():
         if len(x) != len(y):
             print "something went wrong, x y dim missmath"
             return None
-        try:
-            A = numpy.vstack([x, numpy.ones(len(x))]).T
-            linearFitResult = numpy.linalg.lstsq(A,y)
-        except Warning:  #not sure why this is here or if it actually works
-            print "rank error"
+        A = numpy.vstack([x, numpy.ones(len(x))]).T
+        linearFitResult = numpy.linalg.lstsq(A,y)
         slope, intercept = linearFitResult[0]
         rank = linearFitResult[2]
-        results = {'slope' : slope, 'intercept': intercept, 'rank' : rank}
+        results = {'slope' : slope, 'intercept': intercept, 'rank' : rank, 'setsize' : len(dataSet)}
         return(results)
            
-    def linearFitDataSeries(self, dataSeries):
+    def linearFitDataSeries(self, dataSet):
         '''take the dataSeries object and run it through the regression
         function and put the result into the dataSeries attributes'''
-        results = self.calculateLinearRegression(dataSeries.dataPoints)
+        results = self.calculateLinearRegression(dataSet.dataPoints)
         for key in results:
-            dataSeries.addStat(key, results[key])
-        return(dataSeries)
+            dataSet.addStat(key, results[key])
+        return(dataSet)
 
             
-    def find_outliers(self, threshold=2):
+    def calculatePopulationStats(self, dataArray, key):
         '''take the results from the linear calc, rearrange them to list
         of names and slopes. then find entries outside of threshold * standard
         deviation'''
-        names = []
-        vals = []
-        outlier_count = 0
-        for station in self.station_dictionary:
-            names.append(station) #names in first slot
-            vals.append(self.station_dictionary[station]['linearfit'][0])  #slope of linreg in second slot
-        if len(names) != len(vals):
-            raise ValueError("names and values not same length")
-        #find mean and standard deviation
-        mean = numpy.mean(vals)
-        std_dev = numpy.std(vals)
-        #iterate again through looking for outliers
-        for station in self.station_dictionary:
-            value = self.station_dictionary[station]['linearfit'][0]
-            if abs(value - mean) > std_dev*threshold :
-                self.station_dictionary[station]['meta']['outlier'] = True
-                outlier_count += 1
-            else:
-                self.station_dictionary[station]['meta']['outlier'] = False
-        print "Found {} outliers {} std devs from mean".format(outlier_count, threshold)
-        print "    mean: {}, std dev: {}".format(mean, std_dev)
+        popSample = []
+        for data in dataArray:
+            popSample.append(data.dataStats[key])
+        popMean = numpy.mean(popSample)
+        popStd = numpy.std(popSample)
+        
+        for data in dataArray:
+            keyVal = data.dataStats[key]
+            
+            zScore = (popMean - keyVal) / popStd
+            sqrtN = numpy.sqrt(data.dataStats['setsize'])
+            tScore = (popMean - keyVal) / (popStd / sqrtN)
+            data.addStat('{}_zscore'.format(key) , zScore)
+            data.addStat('{}_tscore'.format(key) , tScore)
+            data.addStat('{}_mean'.format(key) , popMean)
+            data.addStat('{}_std'.format(key) , popStd)
     
     def calculateRisiduals(self, dataSeries):
-        '''calculate the risiduals for the linear regression results'''
+        '''Take a dataseries and calculate the difference in the real value
+        for each year in the set with the value we get by using our linear model'''
         risidual = 0
         slope = dataSeries.dataStats['slope']
         intercept = dataSeries.dataStats['intercept']
@@ -83,25 +76,6 @@ class Analysis():
             risidual += risd
         dataSeries.addStat('risidual', risidual)
         return(dataSeries)
-        
-        
-    def computRegressionStats(self):
-        '''comput varies statistics for the stations. EG, risidual sum for 
-        the linear fit, the number of total points.. whatever else I want. 
-        This will be put in the meta data dictionary which is an element for 
-        the station dictionary'''
-        for station in self.station_dictionary:
-            risidual = 0
-            slope = self.station_dictionary[station]['linearfit'][0]
-            intercept = self.station_dictionary[station]['linearfit'][1]
-            data_count = 0
-            for data_point in self.station_dictionary[station]['data']:
-                year, val = data_point
-                calc_val = year * slope + intercept
-                risidual += val-calc_val
-                data_count += 1
-            self.station_dictionary[station]['meta']['risiduals'] = risidual
-            self.station_dictionary[station]['meta']['count'] = data_count
             
 def runner():
     interface = DataInterface()

@@ -97,6 +97,15 @@ class AnalysisTest(unittest.TestCase):
         
         self.assertTrue(abs(data2.dataStats['risidual'] - 0) < 0.00000001)
         
+        
+    def test_popStats(self):
+        '''Test that pop stats are correct'''
+        for dataset in self.testData:
+            self.analysis.linearFitDataSeries(dataset)
+            
+        self.analysis.calculatePopulationStats(self.testData, 'slope')
+        
+        self.assertTrue('slope_mean' in self.testData[0].dataStats)
 
         
     def tearDown(self):
