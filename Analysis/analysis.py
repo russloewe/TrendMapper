@@ -1,8 +1,8 @@
 import csv
 import numpy
 from sets import Set
-from Analysis.data_interface import DataInterface
- 
+#from Analysis.data_interface import DataInterface
+from data_interface import DataInterface
 class Analysis():
     def __init__(self):
         '''linear outliers is a list of names of unique keys for statistical
@@ -45,30 +45,6 @@ class Analysis():
             dataSeries.addStat(key, results[key])
         return(dataSeries)
 
-    def calculate_linear_fit(self, discard_badfit = True):
-        ''' call the linear fit equation and add name and results
-            to array as subarry. Subarray was chosen to make writing to
-            CSV easier'''
-        self.linear_results = [] #start with empty list
-        for station in self.station_dictionary:
-            linear = self.find_linear_slope(self.station_dictionary[station]['data'])
-            m, c = linear[0] # get slope and intercept respectivly
-            r = linear[1] # get risdual
-            if len(r) == 0:  # need to handle when numpy gives empty risudal
-                r = ['']
-            rank = linear[2] # get rank
-            if rank < 2:
-                print "Rank < 2 for {}, likely bad fit".format(station)
-            if discard_badfit and rank < 2:
-                print "skipping {}".format(station)
-                pass
-            total_points = len(self.station_dictionary[station])
-            try:
-                risidual_avg = float(r[0])/total_points
-            except ValueError:
-                risidual_avg = ' '
-            self.station_dictionary[station]['linearfit'] = [m,c]
-            #self.linear_results.append([station, m, c, r[0]])
             
     def find_outliers(self, threshold=2):
         '''take the results from the linear calc, rearrange them to list
@@ -96,6 +72,19 @@ class Analysis():
         print "Found {} outliers {} std devs from mean".format(outlier_count, threshold)
         print "    mean: {}, std dev: {}".format(mean, std_dev)
     
+    def calculateRisiduals(self, dataSeries):
+        '''calculate the risiduals for the linear regression results'''
+        risidual = 0
+        slope = dataSeries.dataStats['slope']
+        intercept = dataSeries.dataStats['intercept']
+        for dataPoint in dataSeries.dataPoints: 
+            x, y = dataPoint
+            risd = (x * slope + intercept) - y
+            risidual += risd
+        dataSeries.addStat('risidual', risidual)
+        return(dataSeries)
+        
+        
     def computRegressionStats(self):
         '''comput varies statistics for the stations. EG, risidual sum for 
         the linear fit, the number of total points.. whatever else I want. 
@@ -115,31 +104,27 @@ class Analysis():
             self.station_dictionary[station]['meta']['count'] = data_count
             
 def runner():
-    d = DataInterface()
-    direct = "/home/russell/GIS/Data/station_year_summary/"
-    count = 0
-    print 'adding filenames '
-    for file in os.listdir(direct):
-        if count < 80000:
-            if file.endswith(".csv"):
-                d.addCSVFile(os.path.join(direct, file))
-                count += 1
-        else:
-            break
-    print 'indexing files'
-    d.name = 'STATION'
-    d.xLable = 'DATE'
-    d.yLable = 'TAVG'
-    d.addCopyAttributeLable('LATITUDE')
-    d.indexCSVFiles()
-    print d.getCSVCount()
-    print 'generating station list'
-    stations = d.getCSVNameList()
-    print '{} valid stations found'.format(len(stations))
-    print 'getting data for station {}'.format(stations[:1])
-    data = d.getCSVNameData(stations[5])
-    print data.name, data.copyAtttributes, data.dataPoints
+    interface = DataInterface()
+    interface.loadFolder('./test/')
+    interface.setCategoryLable('STATION')
+    interface.setXLable('DATE')
+    interface.setYLable('TAVG')
+    interface.addCopyAttributeLable('LATITUDE')
+    interface.addCopyAttributeLable('LONGITUDE')
+    interface.indexCSVFiles()
+    interface.indexCategories()
+    testData = []
+    stations = interface.getCategoryList()
+    for station in stations:
+        data = interface.getCategoryDataset(station)
+        testData.append(data)
     
+    analysis = Analysis()
+    result1 = analysis.linearFitDataSeries(testData[0])
+    result1 = analysis.calculateRisiduals(testData[0])
+    print result1.dataStats['slope']
+    print result1.dataStats['risidual']
+
     
 if __name__ == "__main__":
     import os

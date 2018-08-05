@@ -66,6 +66,11 @@ class AnalysisTest(unittest.TestCase):
         self.assertEqual(result3['rank'], 2)
         
         self.assertEqual(result4['rank'], 1)
+        #test on real data
+        data = self.testData[0]
+        data = self.analysis.linearFitDataSeries(data)
+        data = self.analysis.calculateRisiduals(data)
+        self.assertTrue(abs(data.dataStats['slope'] - 0.041034923339) < 0.00000001)
         
     def test_dataLinReg(self):
         '''Test that analysis can process a dataSeries'''
@@ -76,6 +81,21 @@ class AnalysisTest(unittest.TestCase):
         self.assertTrue(abs(data1.dataStats['slope'] - 1.0) < .0000001)
         self.assertTrue(abs(data1.dataStats['intercept'] -0) < .0000001)
         self.assertEqual(data1.dataStats['rank'], 2)
+        
+    def test_calcRisiduals(self):
+        '''Make sure we can find the risidual'''
+        
+        data1 = self.testData[0]
+        data2 = self.testData[1]
+        data2.dataPoints = [(x, x) for x in range(10)]
+        data1 = self.analysis.linearFitDataSeries(data1)
+        data1 = self.analysis.calculateRisiduals(data1)
+        data2 = self.analysis.linearFitDataSeries(data2)
+        data2 = self.analysis.calculateRisiduals(data2)
+        
+        self.assertTrue(abs(data1.dataStats['risidual'] - 0) < 0.00000001)
+        
+        self.assertTrue(abs(data2.dataStats['risidual'] - 0) < 0.00000001)
         
 
         
