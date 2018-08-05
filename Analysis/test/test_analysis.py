@@ -23,13 +23,46 @@ class AnalysisTest(unittest.TestCase):
 
     def setUp(self):
         """Runs before each test."""
+        
+        #init the data interface to generate test data for the
+        #analysis module
         self.interface = DataInterface()
         self.interface.loadFolder('./Analysis/test/')
         self.interface.setCategoryLable('STATION')
         self.interface.setXLable('DATE')
         self.interface.setYLable('TAVG')
+        self.interface.addCopyAttributeLable('LATITUDE')
+        self.interface.addCopyAttributeLable('LONGITUDE')
         self.interface.indexCSVFiles()
+        self.interface.indexCategories()
+        
+        self.analysis = Analysis()
+    
+    def test_linearRegression(self):
+        '''Test that linear regression passes some test calculation'''
+        testData1 = [(x, x) for x in range(10)]
+        testData2 = [(x, x*2) for x in range(10)]
+        testData3 = [(x, x*3+4) for x in range(10)]
+        testData4 = [(x, x) for x in range(1)]
+        result1 = self.analysis.calculateLinearRegression(testData1)
+        result2 = self.analysis.calculateLinearRegression(testData2)
+        result3 = self.analysis.calculateLinearRegression(testData3)
+        result4 = self.analysis.calculateLinearRegression(testData4)
+        self.assertTrue(abs(result1['slope'] - 1.0) < .0000001)
+        self.assertTrue(abs(result1['intercept'] -0) < .0000001)
+        self.assertEqual(result1['rank'], 2)
+        
+        self.assertTrue(abs(result2['slope'] -2) < .0001)
+        self.assertTrue(abs(result2['intercept'] -0) < .0001)
+        self.assertEqual(result2['rank'], 2)
+        
+        self.assertTrue(abs(result3['slope'] -3) < .0001)
+        self.assertTrue(abs(result3['intercept'] -4) < .0001)
+        self.assertEqual(result3['rank'], 2)
+        
+        self.assertEqual(result4['rank'], 1)
 
+        
     def tearDown(self):
         """Runs after each test."""
         self.interface = None
