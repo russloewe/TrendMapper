@@ -12,7 +12,7 @@ __author__ = 'russloewe@gmai.com'
 __date__ = '2018-07-28'
 __copyright__ = 'Copyright 2018, Russell Loewe'
 
-import unittest
+import unittest, sqlite3
 
 from Analysis.data_interface import DataInterface
 
@@ -35,8 +35,20 @@ class DataInterfaceTest(unittest.TestCase):
     def testUniqueKeys(self):
         '''See that we can get the unique columns in SQL database'''
         out = self.interface.pullUniqueKeys('STATION')
-        self.assertTrue(len(out) > 2)
+        self.assertTrue(len(out) > 20)
+        try:
+            self.interface.pullUniqueKeys('TTT')
+        except sqlite3.OperationalError:
+            self.assertTrue(True) 
+        else:
+            self.assertTrue(False) #was supposed to throw exception
         
+    def test_attributeNamesLoaded(self):
+        '''Make sure that the attribute names were inserted into 
+        SQL '''
+        for name in ['DATE', 'STATION', 'TAVG', 'NAME', 'LATITUDE', 'LONGITUDE']:
+            self.interface.pullUniqueKeys(name)
+
 
         
 if __name__ == "__main__":
