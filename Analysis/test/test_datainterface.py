@@ -12,7 +12,7 @@ __author__ = 'russloewe@gmai.com'
 __date__ = '2018-07-28'
 __copyright__ = 'Copyright 2018, Russell Loewe'
 
-import unittest, sqlite3, os
+import unittest, sqlite3, os, csv
 
 from Analysis.data_interface import DataInterface
 
@@ -110,7 +110,40 @@ class DataInterfaceTest(unittest.TestCase):
         
     def test_writecsv(self):
         '''make sure we can write out a csv'''
-        self.interface.writeResultsToCSV('./Analysis/test/testout.csv')
+        self.interface.writeTableToCSV('./Analysis/test/testout.csv', self.interface.mainTableName)
+        c = 0
+        with open('./Analysis/test/testout.csv', 'r') as f:
+            dr = csv.DictReader(f)
+            for line in dr:
+                c += 1
+        self.assertEqual(c , 893)
+        
+    def test_emptydb(self):
+        '''Make sure we handle at empty SQL db'''
+        tmp = DataInterface()
+        names = ['DATE', 'STATION', 'TAVG', 'NAME', 'LATITUDE', 'LONGITUDE']
+        tmp.setAttributeNames(names)
+        tmp.initSQL()
+        try:
+            tmp.connectMainSQL('./Analysis/test/empty.db', 'mainDBtable')
+        except sqlite3.OperationalError:
+            self.assertTrue(True)
+        else:
+            self.assertTrue(False)
+            
+    def test_writesqlout(self):
+        '''make sure that the databases are written out correctly'''
+        self.interface.saveMainToDB('./Analysis/test/testout.sqlite', overwrite=False)
+        tmp = DataInterface()
+        names = ['DATE', 'STATION', 'TAVG', 'NAME', 'LATITUDE', 'LONGITUDE']
+        tmp.setAttributeNames(names)
+        tmp.initSQL()
+        try:
+            tmp.connectMainSQL('./Analysis/test/testout.sqlite')
+        except sqlite3.OperationalError:
+            self.assertTrue(False)
+        else:
+            self.assertTrue(True)
         
 
         

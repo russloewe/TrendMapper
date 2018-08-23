@@ -5,6 +5,8 @@ class DataInterface():
     
     def __init__(self):
         self.attributeNames = []
+        self.mainTableName = None
+        self.outTableName = None
         
     def setAttributeNames(self, names):
         '''add attributes to an array that will be copied from 
@@ -15,43 +17,56 @@ class DataInterface():
         self.attributeNamesTuple = tuple(self.attributeNames)
     
     def initSQL(self):
-        self.con = sqlite3.connect(":memory:")
-        self.conout = sqlite3.connect(":memory:")
-        self.conmeta = sqlite3.connect(":memory:")
-        curR = self.con.cursor()
-        cur2 = self.conout.cursor()
-        cur3 = self.conmeta.cursor()
+        self.mainTableName = 'CSVdata'
+        self.outTableName = 'resultdata'
+        self.maincon = sqlite3.connect(":memory:")
+        cur = self.maincon.cursor()
         if len(self.attributeNames) < 1:
             raise AttributeError("no attributes specified, cant init SQL")
-        curR.execute("CREATE TABLE CSVdata (ID int PRIMARY KEY)")
-        cur2.execute("CREATE TABLE resultdata (ID int)")
-        cur3.execute("CREATE TABLE metadata (filename VARCHAR(200) UNIQUE)")
+        cur.execute("CREATE TABLE {} (ID int PRIMARY KEY)".format(self.mainTableName) )
+        cur.execute("CREATE TABLE {} (ID int)".format(self.outTableName) )
+        cur.execute("CREATE TABLE metadata (filename VARCHAR(200) UNIQUE)")
         for name in self.attributeNames:
-            curR.execute("ALTER TABLE CSVdata ADD {} VARCHAR(50)".format(name))
-            cur2.execute("ALTER TABLE resultdata ADD {} VARCHAR(50)".format(name))
-        self.con.commit()
-        self.conout.commit()
-        self.conmeta.commit()
+            cur.execute("ALTER TABLE CSVdata ADD {} VARCHAR(50)".format(name))
+            cur.execute("ALTER TABLE resultdata ADD {} VARCHAR(50)".format(name))
+        self.maincon.commit()
    
     def close(self):
         '''close the sql connection'''
-        self.con.close()
-        self.con = None
+        self.maincon.close()
+        self.maincon = None
     
-    def connectSQL(self, path):
-        self.con = sqlite3.connect(path)
+    def connectMainSQL(self, path, tableName=None):
+        if tableName == None:
+            tableName = self.mainTableName
+        tmp = sqlite3.connect(path)
+        cur = tmp.cursor()
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        result = cur.fetchone()
+        if (result is None) or (self.mainTableName not in result):
+            self.maincon = None
+            raise sqlite3.OperationalError('No table {} in {}'.format(tableName, path))
+        cur.execute('PRAGMA table_info({})'.format(tableName))
+        columns = [i[1] for i in cur.fetchall()]
+        print columns
+        for attr in self.attributeNames:
+            if attr not in columns:
+                self.maincon = None
+                raise sqlite3.OperationalError('Attribute {} not in table {} in {}'.format(attr, tableName, path))
+        self.maincon = tmp
+        
+    
     
     def loadCSV(self, filePath):
         '''take the path of a csv file and import the rows into a sql 
         database'''
         try:
-            cur = self.con.cursor()
-            curmeta = self.conmeta.cursor()
+            cur = self.maincon.cursor()
         except AttributeError:
             raise AttributeError('SQL connection not established')
         try:
             #if the file has been loaded, skip
-            curmeta.execute('INSERT INTO metadata (filename) VALUES (?)', (filePath,))
+            cur.execute('INSERT INTO metadata (filename) VALUES (?)', (filePath,))
         except sqlite3.IntegrityError:
             return False
         
@@ -67,19 +82,26 @@ class DataInterface():
                 sqlVals = tuple(to_db)
                 sqlStatement = "INSERT INTO CSVdata {} VALUES {};".format(self.attributeNamesTuple, sqlVals)
                 cur.execute(sqlStatement)
-        self.con.commit()
+        self.maincon.commit()
         return True
     
-    def writeResultsToCSV(self, path):
-         with open(path, 'w') as csvfile:
+    def writeTableToCSV(self, path, tableName):
+        try:
+            cur = self.maincon.cursor()
+        except AttributeError:
+            raise AttributeError('SQL connection not established')
+        with open(path, 'w') as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=',',
                             quotechar='"', quoting=csv.QUOTE_MINIMAL)
             #write header to first line, self.unk is original unique key
-            header = [f for f in self.dataSets[0].dataStats]          
-            spamwriter.writerow(header) 
-            for data in self.dataSets:
-                row = [data.dataStats[key] for key in header]
-                spamwriter.writerow(row) 
+            cur.execute('PRAGMA table_info({})'.format(tableName))
+            columns = [i[1] for i in cur.fetchall()]
+            # header = [f for f in self.dataSets[0].dataStats]          
+            spamwriter.writerow(columns) 
+            cur.execute('SELECT * FROM {}'.format(tableName))
+            for data in cur.fetchall():
+                #row = [data.dataStats[key] for key in header]
+                spamwriter.writerow(data) 
     
     def loadFolder(self, folderPath):
         '''Get a list of csv files in the provided directory and
@@ -93,7 +115,7 @@ class DataInterface():
         column'''
         keyList = []
         try:
-            cur = self.con.cursor()
+            cur = self.maincon.cursor()
         except AttributeError:
             raise AttributeError('SQL connection not established')
         cur.execute('SELECT DISTINCT {} from CSVdata'.format(column))
@@ -105,7 +127,7 @@ class DataInterface():
         '''Get data set for specific keyname'''
         data = []
         try:
-            cur = self.con.cursor()
+            cur = self.maincon.cursor()
         except AttributeError:
             raise AttributeError('SQL connection not established')
         cur.execute('SELECT {}, {} FROM CSVdata WHERE {} == "{}"'.format(xName, yName, keyCol, keyName))
@@ -122,7 +144,7 @@ class DataInterface():
         newdb = sqlite3.connect(path)
         if overwrite:
             newdb.execute("drop table if exists CSVdata")
-        query = "".join(line for line in self.con.iterdump())
+        query = "".join(line for line in self.maincon.iterdump())
         newdb.executescript(query)
         
     def saveResultsToDB(self, path, overwrite=False):
@@ -132,7 +154,9 @@ class DataInterface():
         newdb = sqlite3.connect(path)
         if overwrite:
             newdb.execute("drop table if exists resultdata")
-        query = "".join(line for line in self.conout.iterdump())
+        query = "".join(line for line in self.mainconout.iterdump())
         newdb.executescript(query)
 
-           
+    def indexMainDb(self):
+        '''index the main database'''
+        pass       
