@@ -16,7 +16,7 @@ class DataInterface():
                 self.attributeNames.append(name)
         self.attributeNamesTuple = tuple(self.attributeNames)
     
-    def initSQL(self):
+    def initSQL(self, spatialite=True):
         '''set up our initial tmp sql database in memory and init some tables
         maintable: the name to load the incomming dataset, ie, the csv 
         outtable:   the name for the table where well put the results of the analysis
@@ -29,8 +29,9 @@ class DataInterface():
         self.maincon = spatialite_connect(":memory:")
         cur = self.maincon.cursor()
         
-        cur.execute('SELECT InitSpatialMetadata()')
-
+        if spatialite:
+            cur.execute('SELECT InitSpatialMetadata()')
+            
         cur.execute("CREATE TABLE {} (ID int PRIMARY KEY)".format(self.mainTableName) )
         cur.execute("CREATE TABLE {} (ID int)".format(self.outTableName) )
         cur.execute("CREATE TABLE metadata (filename VARCHAR(200) UNIQUE)")
@@ -46,12 +47,24 @@ class DataInterface():
             cur = self.maincon.cursor()
         except AttributeError:
             raise AttributeError('SQL connection not established')
-        cur.execute('CREATE TABLE {} ({} VARCHAR(50))'.format(indexName, uniqueKey))
-        sql = "SELECT AddGeometryColumn('{}', 'geom', 4326, 'POINT', 'XY');".format(indexName)
-       # try:
-        cur.execute(sql)
-        #except:
-            #raise Exception('Couldnt create geometry for index')
+        try:
+            cur.execute('CREATE TABLE {} ({} VARCHAR(50))'.format(indexName, uniqueKey))
+        except sqlite3.OperationalError as e:
+            if str(e) == 'table {} already exists'.format(indexName):
+                return
+            else:
+                raise sqlite3.OperationalError(str(e))
+        
+        
+        #init spaital lite or pass if it already has metadata
+        try:
+            sql = "SELECT AddGeometryColumn('{}', 'geom', 4326, 'POINT', 'XY');".format(indexName)
+            cur.execute(sql)
+        except:
+            cur.execute('SELECT InitSpatialMetadata()')
+            sql = "SELECT AddGeometryColumn('{}', 'geom', 4326, 'POINT', 'XY');".format(indexName)
+            cur.execute(sql)
+
         keyList = self.pullUniqueKeys(uniqueKey)
         for k in keyList:
             cur.execute("SELECT {}, {}, {} FROM {} WHERE {} == '{}' LIMIT 1;".format(uniqueKey, xName, yName, self.mainTableName, uniqueKey, k))
@@ -69,13 +82,16 @@ class DataInterface():
         self.maincon = None
     
     def connectMainSQL(self, path, tableName=None):
+        '''make a connection to a database on the disk'''
         if tableName == None:
             tableName = self.mainTableName
-        tmp = sqlite3.connect(path)
+        else:
+            self.mainTableName = tableName
+        tmp = spatialite_connect(path)
         cur = tmp.cursor()
         cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
         result = cur.fetchone()
-        if (result is None) or (self.mainTableName not in result):
+        if (result is None) or (tableName not in result):
             self.maincon = None
             raise sqlite3.OperationalError('No table {} in {}'.format(tableName, path))
         cur.execute('PRAGMA table_info({})'.format(tableName))
@@ -86,7 +102,7 @@ class DataInterface():
                 raise sqlite3.OperationalError('Attribute {} not in table {} in {}'.format(attr, tableName, path))
         self.maincon = tmp
         
-    
+        
     def loadCSV(self, filePath):
         '''take the path of a csv file and import the rows into a sql 
         database'''
@@ -140,7 +156,7 @@ class DataInterface():
             if file.endswith(".csv"):
                 self.loadCSV(os.path.join(folderPath, file))
             
-    def pullUniqueKeys(self, column, tableName=None):
+    def pullUniqueKeys(self, column, tableName=None, indexName=None):
         ''' grab a list of all the unique names in the given
         column'''
         if tableName is None:
@@ -150,7 +166,10 @@ class DataInterface():
             cur = self.maincon.cursor()
         except AttributeError:
             raise AttributeError('SQL connection not established')
-        cur.execute('SELECT DISTINCT {} from {}'.format(column,tableName))
+        if indexName is not None:
+            cur.execute('SELECT DISTINCT {} from {} WITH(INDEX({}))'.format(column,tableName, indexName))
+        else:
+            cur.execute('SELECT DISTINCT {} from {}'.format(column,tableName))
         result = [ str(list(i)[0]) for i in cur.fetchall()]
         for row in result :
             keyList.append(str(row))
@@ -169,8 +188,14 @@ class DataInterface():
             y = str(row[1])
             data.append((x, y))
         return data
-
-    def saveMemoryToDB(self, path, overwrite=False):
+    
+    def loadDBToMemory(self, path):
+        '''copy a db from the disk to memory and replace the 
+        connection'''
+        self.connectMainSQL(path)
+        self.maincon = self.saveMainConToDB(':memory:')
+        
+    def saveMainConToDB(self, path, overwrite=False):
         '''save the main data table 'CSVdata' to SQL db on disk, 
         takes filename'''
         if overwrite:
@@ -182,6 +207,7 @@ class DataInterface():
         newdb = spatialite_connect(path)
         query = "".join(line for line in self.maincon.iterdump())
         newdb.executescript(query)
+        return newdb
         
     def saveTableToDB(self, tableName, path, overwrite=False):
         '''save the main data table 'CSVdata' to SQL db on disk, 
@@ -193,10 +219,25 @@ class DataInterface():
         query = "".join(line for line in self.mainconout.iterdump())
         newdb.executescript(query)
 
-    def indexMainDb(self):
+    def indexTable(self, indexName, tableName, indexCol):
         '''index the main database'''
-        pass       
+        try:
+            cur = self.maincon.cursor()
+        except AttributeError:
+            raise AttributeError('SQL connection not established') 
+        try:
+            cur.execute('CREATE INDEX {} ON {}({})'.format(indexName, tableName, indexCol))
+        except sqlite3.OperationalError as e:
+            if str(e) == 'index {} already exists'.format(indexName):
+                pass
+            else:
+                raise(sqlite3.OperationalError(str(e)))
+        self.maincon.commit()
 
+    def close(self):
+        '''close the db connection'''
+        self.maincon.close()
+        
 '''the following function is taken from 
 https://github.com/qgis/QGIS 
 file QGIS/python/utils.py 592-620

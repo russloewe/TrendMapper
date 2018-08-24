@@ -133,7 +133,7 @@ class DataInterfaceTest(unittest.TestCase):
             
     def test_writesqlout(self):
         '''make sure that the databases are written out correctly'''
-        self.interface.saveMemoryToDB('./Analysis/test/testout.sqlite', overwrite=False)
+        self.interface.saveMainConToDB('./Analysis/test/testout.sqlite', overwrite=False)
         tmp = DataInterface()
         names = ['DATE', 'STATION', 'TAVG', 'NAME', 'LATITUDE', 'LONGITUDE']
         tmp.setAttributeNames(names)
@@ -158,9 +158,13 @@ class DataInterfaceTest(unittest.TestCase):
         #make sure geometry is not none
         list3 = self.interface.pullUniqueKeys( 'geom', tableName='geomindex')
         self.assertFalse('None' in list3)
+        self.interface.createGeomIndex('geomindex', 'STATION', 'LONGITUDE', 'LATITUDE') #make sure it doesnt trip up running twice
         
-        
-        
+    def test_index(self):
+        '''Make sure that the sql column indexer works'''
+        self.interface.indexTable('stationIndex', self.interface.mainTableName, 'STATION')
+        self.interface.indexTable('stationIndex', self.interface.mainTableName, 'STATION')
+        stations = self.interface.pullUniqueKeys('STATION')
 
         
 if __name__ == "__main__":
