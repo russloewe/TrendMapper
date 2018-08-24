@@ -55,14 +55,9 @@ class DataInterface():
         keyList = self.pullUniqueKeys(uniqueKey)
         for k in keyList:
             cur.execute("SELECT {}, {}, {} FROM {} WHERE {} == '{}' LIMIT 1;".format(uniqueKey, xName, yName, self.mainTableName, uniqueKey, k))
-            result = cur.fetchall()
-            name = result[0][0]
-           
-            geom = "GeomFromText('POINT("
-            geom += "{}".format(result[0][1])
-            geom += "{}".format(result[0][2])
-            geom += ")', 4326)"
-            
+            result = cur.fetchone()
+            name = result[0]
+            geom = "GeomFromText('POINT({} {})', 4326)".format(str(result[1]), str(result[2]))
             params = (indexName, uniqueKey, 'geom', name, geom )
             sql = "INSERT INTO {} ({}, geom) VALUES ('{}', {})".format(indexName, uniqueKey, name, geom)
             cur.execute(sql)
@@ -85,7 +80,6 @@ class DataInterface():
             raise sqlite3.OperationalError('No table {} in {}'.format(tableName, path))
         cur.execute('PRAGMA table_info({})'.format(tableName))
         columns = [i[1] for i in cur.fetchall()]
-        print columns
         for attr in self.attributeNames:
             if attr not in columns:
                 self.maincon = None
@@ -179,7 +173,6 @@ class DataInterface():
     def saveMemoryToDB(self, path, overwrite=False):
         '''save the main data table 'CSVdata' to SQL db on disk, 
         takes filename'''
-        
         if overwrite:
             try:
                 os.remove(path)

@@ -155,6 +155,9 @@ class DataInterfaceTest(unittest.TestCase):
         intersect2 = set(list2).symmetric_difference(list1)
         self.assertEqual(len(intersect1), 0)
         self.assertEqual(len(intersect2), 0)
+        #make sure geometry is not none
+        list3 = self.interface.pullUniqueKeys( 'geom', tableName='geomindex')
+        self.assertFalse('None' in list3)
         
         
         
