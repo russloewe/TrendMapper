@@ -133,7 +133,7 @@ class DataInterfaceTest(unittest.TestCase):
             
     def test_writesqlout(self):
         '''make sure that the databases are written out correctly'''
-        self.interface.saveMainToDB('./Analysis/test/testout.sqlite', overwrite=False)
+        self.interface.saveMemoryToDB('./Analysis/test/testout.sqlite', overwrite=False)
         tmp = DataInterface()
         names = ['DATE', 'STATION', 'TAVG', 'NAME', 'LATITUDE', 'LONGITUDE']
         tmp.setAttributeNames(names)
@@ -144,6 +144,19 @@ class DataInterfaceTest(unittest.TestCase):
             self.assertTrue(False)
         else:
             self.assertTrue(True)
+        
+    def test_geomindex(self):
+        '''make sure we can create a spatial index for our data'''
+        self.interface.createGeomIndex('geomindex', 'STATION', 'LONGITUDE', 'LATITUDE')
+        
+        list1 = self.interface.pullUniqueKeys('STATION')
+        list2 = self.interface.pullUniqueKeys( 'STATION', tableName='geomindex')
+        intersect1 = set(list1).symmetric_difference(list2)
+        intersect2 = set(list2).symmetric_difference(list1)
+        self.assertEqual(len(intersect1), 0)
+        self.assertEqual(len(intersect2), 0)
+        
+        
         
 
         

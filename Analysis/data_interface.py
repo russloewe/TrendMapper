@@ -17,12 +17,20 @@ class DataInterface():
         self.attributeNamesTuple = tuple(self.attributeNames)
     
     def initSQL(self):
-        self.mainTableName = 'CSVdata'
-        self.outTableName = 'resultdata'
-        self.maincon = sqlite3.connect(":memory:")
-        cur = self.maincon.cursor()
+        '''set up our initial tmp sql database in memory and init some tables
+        maintable: the name to load the incomming dataset, ie, the csv 
+        outtable:   the name for the table where well put the results of the analysis
+        meta table: name of files that have been loaded to prevent loading a file twice'''
         if len(self.attributeNames) < 1:
             raise AttributeError("no attributes specified, cant init SQL")
+        
+        self.mainTableName = 'CSVdata'
+        self.outTableName = 'resultdata'
+        self.maincon = spatialite_connect(":memory:")
+        cur = self.maincon.cursor()
+        
+        cur.execute('SELECT InitSpatialMetadata()')
+
         cur.execute("CREATE TABLE {} (ID int PRIMARY KEY)".format(self.mainTableName) )
         cur.execute("CREATE TABLE {} (ID int)".format(self.outTableName) )
         cur.execute("CREATE TABLE metadata (filename VARCHAR(200) UNIQUE)")
@@ -31,6 +39,35 @@ class DataInterface():
             cur.execute("ALTER TABLE resultdata ADD {} VARCHAR(50)".format(name))
         self.maincon.commit()
    
+    def createGeomIndex(self, indexName, uniqueKey, xName, yName):
+        '''create a new table with a geometry point layer for 
+        querrying by location'''
+        try:
+            cur = self.maincon.cursor()
+        except AttributeError:
+            raise AttributeError('SQL connection not established')
+        cur.execute('CREATE TABLE {} ({} VARCHAR(50))'.format(indexName, uniqueKey))
+        sql = "SELECT AddGeometryColumn('{}', 'geom', 4326, 'POINT', 'XY');".format(indexName)
+       # try:
+        cur.execute(sql)
+        #except:
+            #raise Exception('Couldnt create geometry for index')
+        keyList = self.pullUniqueKeys(uniqueKey)
+        for k in keyList:
+            cur.execute("SELECT {}, {}, {} FROM {} WHERE {} == '{}' LIMIT 1;".format(uniqueKey, xName, yName, self.mainTableName, uniqueKey, k))
+            result = cur.fetchall()
+            name = result[0][0]
+           
+            geom = "GeomFromText('POINT("
+            geom += "{}".format(result[0][1])
+            geom += "{}".format(result[0][2])
+            geom += ")', 4326)"
+            
+            params = (indexName, uniqueKey, 'geom', name, geom )
+            sql = "INSERT INTO {} ({}, geom) VALUES ('{}', {})".format(indexName, uniqueKey, name, geom)
+            cur.execute(sql)
+        self.maincon.commit()
+
     def close(self):
         '''close the sql connection'''
         self.maincon.close()
@@ -55,7 +92,6 @@ class DataInterface():
                 raise sqlite3.OperationalError('Attribute {} not in table {} in {}'.format(attr, tableName, path))
         self.maincon = tmp
         
-    
     
     def loadCSV(self, filePath):
         '''take the path of a csv file and import the rows into a sql 
@@ -110,18 +146,21 @@ class DataInterface():
             if file.endswith(".csv"):
                 self.loadCSV(os.path.join(folderPath, file))
             
-    def pullUniqueKeys(self, column):
+    def pullUniqueKeys(self, column, tableName=None):
         ''' grab a list of all the unique names in the given
         column'''
+        if tableName is None:
+            tableName = self.mainTableName
         keyList = []
         try:
             cur = self.maincon.cursor()
         except AttributeError:
             raise AttributeError('SQL connection not established')
-        cur.execute('SELECT DISTINCT {} from CSVdata'.format(column))
-        for row in cur:
-            keyList.append(str(row[0]))
-        return keyList
+        cur.execute('SELECT DISTINCT {} from {}'.format(column,tableName))
+        result = [ str(list(i)[0]) for i in cur.fetchall()]
+        for row in result :
+            keyList.append(str(row))
+        return result
         
     def pullXYData(self, keyCol, keyName, xName, yName):
         '''Get data set for specific keyname'''
@@ -137,26 +176,66 @@ class DataInterface():
             data.append((x, y))
         return data
 
-    def saveMainToDB(self, path, overwrite=False):
+    def saveMemoryToDB(self, path, overwrite=False):
         '''save the main data table 'CSVdata' to SQL db on disk, 
         takes filename'''
         
-        newdb = sqlite3.connect(path)
         if overwrite:
-            newdb.execute("drop table if exists CSVdata")
+            try:
+                os.remove(path)
+            except:
+                pass
+            #newdb.execute("drop table if exists *")
+        newdb = spatialite_connect(path)
         query = "".join(line for line in self.maincon.iterdump())
         newdb.executescript(query)
         
-    def saveResultsToDB(self, path, overwrite=False):
+    def saveTableToDB(self, tableName, path, overwrite=False):
         '''save the main data table 'CSVdata' to SQL db on disk, 
         takes filename'''
         
         newdb = sqlite3.connect(path)
         if overwrite:
-            newdb.execute("drop table if exists resultdata")
+            newdb.execute("drop table if exists {}".format(tableName))
         query = "".join(line for line in self.mainconout.iterdump())
         newdb.executescript(query)
 
     def indexMainDb(self):
         '''index the main database'''
         pass       
+
+'''the following function is taken from 
+https://github.com/qgis/QGIS 
+file QGIS/python/utils.py 592-620
+Falls under the same GPL license as this project'''
+
+def spatialite_connect(*args, **kwargs):
+    """returns a dbapi2.Connection to a SpatiaLite db
+    using the "mod_spatialite" extension (python3)"""
+    con = sqlite3.dbapi2.connect(*args, **kwargs)
+    con.enable_load_extension(True)
+    cur = con.cursor()
+    libs = [
+        # SpatiaLite >= 4.2 and Sqlite >= 3.7.17, should work on all platforms
+        ("mod_spatialite", "sqlite3_modspatialite_init"),
+        # SpatiaLite >= 4.2 and Sqlite < 3.7.17 (Travis)
+        ("mod_spatialite.so", "sqlite3_modspatialite_init"),
+        # SpatiaLite < 4.2 (linux)
+        ("libspatialite.so", "sqlite3_extension_init")
+    ]
+    found = False
+    for lib, entry_point in libs:
+        try:
+            cur.execute("select load_extension('{}', '{}')".format(lib, entry_point))
+        except sqlite3.OperationalError:
+            continue
+        else:
+            found = True
+            break
+    if not found:
+        raise RuntimeError("Cannot find any suitable spatialite module")
+    
+    
+    cur.close()
+    con.enable_load_extension(False)
+    return con
