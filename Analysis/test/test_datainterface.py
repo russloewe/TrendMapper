@@ -58,7 +58,7 @@ class DataInterfaceTest(unittest.TestCase):
     def test_UniqueKeys(self):
         '''See that we can get the unique columns in SQL database'''
         out = self.interface.pullUniqueKeys('STATION')
-        self.assertEqual(len(out) , 62)
+        self.assertEqual(len(out) , 63)
         try:
             self.interface.pullUniqueKeys('TTT')
         except sqlite3.OperationalError:
@@ -116,7 +116,7 @@ class DataInterfaceTest(unittest.TestCase):
             dr = csv.DictReader(f)
             for line in dr:
                 c += 1
-        self.assertEqual(c , 893)
+        self.assertEqual(c , 874)
         
     def test_emptydb(self):
         '''Make sure we handle at empty SQL db'''
@@ -166,6 +166,12 @@ class DataInterfaceTest(unittest.TestCase):
         self.interface.indexTable('stationIndex', self.interface.mainTableName, 'STATION')
         stations = self.interface.pullUniqueKeys('STATION')
 
+    def test_filter(self):
+        '''make sure the filter location works'''
+        self.interface.createGeomIndex('geomindex', 'STATION', 'LONGITUDE', 'LATITUDE')
+        result = self.interface.filter('STATION', './Analysis/test/states.sqlite', 'geomindex', 'states', 'geom' , 'GEOMETRY')
+        self.assertEqual(len(result), 60)
+        self.assertFalse('TEST' in result)
         
 if __name__ == "__main__":
     suite = unittest.makeSuite(DataInterfaceTest)

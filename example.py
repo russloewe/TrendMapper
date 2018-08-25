@@ -20,7 +20,7 @@ def runner1():
     
     #load all the csv files into the sql database
     print 'Loading Folder'
-    interface.loadFolder('./Analysis/test/testcsv/')
+    interface.loadFolder('./Analysis/test/')
     
     #create a spacial index
     print 'Creating geometry index'
@@ -88,10 +88,42 @@ def runner3():
     #save the database to disc
     print 'Saving database to disk'
     interface.saveMainConToDB('./Analysis/test/example0.db', overwrite=True)
+
+def runner4():
+    #startup the interface
+    interface = DataInterface()
+    
+    #specify the attributes that we are intersted in
+    names = ['DATE', 'STATION', 'TAVG', 'NAME', 'LATITUDE', 'LONGITUDE']
+    interface.setAttributeNames(names)
+    
+    #start the memory sql database with attribute names that we set
+    print 'Init SQL database'
+    interface.initSQL()
+    
+    #load all the csv files into the sql database
+    print 'Loading Folder'
+    interface.loadFolder('./Analysis/test/')
+    
+    #create a spacial index
+    print 'Creating geometry index'
+    interface.createGeomIndex('geomindex', 'STATION', 'LONGITUDE', 'LATITUDE')
+    
+    #get a list of all the stations that got loaded into memory    
+    print 'Pulling station list'
+    stations = interface.pullUniqueKeys('STATION', tableName = 'geomindex')
+    total = len(stations)
+    print '{} stations'.format(total)
+    
+    print 'Creating index for stations'
+    interface.indexTable('stationIndex', interface.mainTableName, 'STATION')
+    res = interface.filter('STATION', './Analysis/test/states.sqlite', 'geomindex', 'states', 'geom' , 'GEOMETRY')
+    print res
+    print len(res)
     
 if __name__ == "__main__":
     import os
     import cProfile
-    cProfile.run('runner2()')
+    cProfile.run('runner4()')
 
 

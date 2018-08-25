@@ -54,8 +54,7 @@ class DataInterface():
                 return
             else:
                 raise sqlite3.OperationalError(str(e))
-        
-        
+
         #init spaital lite or pass if it already has metadata
         try:
             sql = "SELECT AddGeometryColumn('{}', 'geom', 4326, 'POINT', 'XY');".format(indexName)
@@ -161,7 +160,6 @@ class DataInterface():
         column'''
         if tableName is None:
             tableName = self.mainTableName
-        keyList = []
         try:
             cur = self.maincon.cursor()
         except AttributeError:
@@ -171,8 +169,6 @@ class DataInterface():
         else:
             cur.execute('SELECT DISTINCT {} from {}'.format(column,tableName))
         result = [ str(list(i)[0]) for i in cur.fetchall()]
-        for row in result :
-            keyList.append(str(row))
         return result
         
     def pullXYData(self, keyCol, keyName, xName, yName):
@@ -237,6 +233,29 @@ class DataInterface():
     def close(self):
         '''close the db connection'''
         self.maincon.close()
+
+    def filter(self, column, path, table1, table2, geom1, geom2):
+        try:
+            cur = self.maincon.cursor()
+        except AttributeError:
+            raise AttributeError('SQL connection not established') 
+        
+        sql = "ATTACH DATABASE '{}' AS 'db'".format(path)
+        cur.execute(sql)
+        
+        try:
+            cur.execute('SELECT {}.{} FROM db.{}'.format(table2, geom2, table2) )
+        except sqlite3.OperationalError:
+            raise sqlite3.OperationalError('Database {} attach failed'.format(path))
+            
+        sql = "SELECT {}.{} FROM {}, {} WHERE Within({}.{}, {}.{})".format(table1, column, table1, table2, table1, geom1, table2, geom2)
+        cur.execute(sql)
+        result = [ str(list(i)[0]) for i in cur.fetchall()]
+        cur.execute('DETACH db')
+        self.maincon.commit
+        return result
+    
+        
         
 '''the following function is taken from 
 https://github.com/qgis/QGIS 
