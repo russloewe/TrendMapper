@@ -1,6 +1,9 @@
 import csv, sqlite3
 import os
-
+import logging
+logging.getLogger(__name__)
+FORMAT = '%(asctime)-15s {}: %(message)s'.format(__name__)
+logging.basicConfig(format=FORMAT, filename='{}.log'.format(__name__))
 class DataInterface():
     
     def __init__(self):
@@ -15,34 +18,43 @@ class DataInterface():
             if name not in self.attributeNames:
                 self.attributeNames.append(name)
         self.attributeNamesTuple = tuple(self.attributeNames)
-    
-    def initSQL(self, spatialite=True):
+            
+    def initSQL(self, path, spatialite=True, overwrite=False, connect=True, mainTableName='CSVdata'):
         '''set up our initial tmp sql database in memory and init some tables
         maintable: the name to load the incomming dataset, ie, the csv 
         outtable:   the name for the table where well put the results of the analysis
         meta table: name of files that have been loaded to prevent loading a file twice'''
         if len(self.attributeNames) < 1:
             raise AttributeError("no attributes specified, cant init SQL")
-        
+        if overwrite:
+            try:
+                os.remove(path)
+            except:
+                pass
+            
         self.mainTableName = 'CSVdata'
-        self.outTableName = 'resultdata'
-        self.maincon = spatialite_connect(":memory:")
-        cur = self.maincon.cursor()
+        newdb = spatialite_connect(path)
+        cur = newdb.cursor()
         
         if spatialite:
+            
             cur.execute('SELECT InitSpatialMetadata()')
             
         cur.execute("CREATE TABLE {} (ID int PRIMARY KEY)".format(self.mainTableName) )
-        cur.execute("CREATE TABLE {} (ID int)".format(self.outTableName) )
         cur.execute("CREATE TABLE metadata (filename VARCHAR(200) UNIQUE)")
         for name in self.attributeNames:
             cur.execute("ALTER TABLE CSVdata ADD {} VARCHAR(50)".format(name))
-            cur.execute("ALTER TABLE resultdata ADD {} VARCHAR(50)".format(name))
-        self.maincon.commit()
+        newdb.commit()
+        if connect:
+            self.maincon = newdb
+            self.mainTableName = mainTableName
    
-    def createGeomIndex(self, indexName, uniqueKey, xName, yName):
+    def createGeoTable(self, indexName, uniqueKey, xName, yName, keySubset=None, initSpatialite=False):
         '''create a new table with a geometry point layer for 
-        querrying by location'''
+        querrying by location
+        
+        
+        plan- create new table, leave lat lon  cols'''
         try:
             cur = self.maincon.cursor()
         except AttributeError:
@@ -56,15 +68,17 @@ class DataInterface():
                 raise sqlite3.OperationalError(str(e))
 
         #init spaital lite or pass if it already has metadata
-        try:
-            sql = "SELECT AddGeometryColumn('{}', 'geom', 4326, 'POINT', 'XY');".format(indexName)
-            cur.execute(sql)
-        except:
-            cur.execute('SELECT InitSpatialMetadata()')
-            sql = "SELECT AddGeometryColumn('{}', 'geom', 4326, 'POINT', 'XY');".format(indexName)
-            cur.execute(sql)
-
-        keyList = self.pullUniqueKeys(uniqueKey)
+        if initSpatialite:
+            cur.execute('SELECT InitSpatialMetadata()')            
+        
+        sql = "SELECT AddGeometryColumn('{}', 'geom', 4326, 'POINT', 'XY');".format(indexName)
+        cur.execute(sql)
+        
+        if keySubset == None:
+            keyList = self.pullUniqueKeys(uniqueKey)
+        else:
+            keyList = keySubset
+       
         for k in keyList:
             cur.execute("SELECT {}, {}, {} FROM {} WHERE {} == '{}' LIMIT 1;".format(uniqueKey, xName, yName, self.mainTableName, uniqueKey, k))
             result = cur.fetchone()
@@ -83,6 +97,8 @@ class DataInterface():
     def connectMainSQL(self, path, tableName=None):
         '''make a connection to a database on the disk'''
         if tableName == None:
+            if self.mainTableName == None:
+                raise AttributeError('Cannot connect to database without a main table specified')
             tableName = self.mainTableName
         else:
             self.mainTableName = tableName
@@ -180,16 +196,13 @@ class DataInterface():
             raise AttributeError('SQL connection not established')
         cur.execute('SELECT {}, {} FROM CSVdata WHERE {} == "{}"'.format(xName, yName, keyCol, keyName))
         for row in cur:
-            x = str(row[0])
-            y = str(row[1])
-            data.append((x, y))
+            if (row[0] == '') or  (row[1] == ''):
+                pass
+            else:
+                x = float(row[0])
+                y = float(row[1])
+                data.append((x, y))
         return data
-    
-    def loadDBToMemory(self, path):
-        '''copy a db from the disk to memory and replace the 
-        connection'''
-        self.connectMainSQL(path)
-        self.maincon = self.saveMainConToDB(':memory:')
         
     def saveMainConToDB(self, path, overwrite=False):
         '''save the main data table 'CSVdata' to SQL db on disk, 
@@ -203,17 +216,8 @@ class DataInterface():
         newdb = spatialite_connect(path)
         query = "".join(line for line in self.maincon.iterdump())
         newdb.executescript(query)
+        newdb.commit()
         return newdb
-        
-    def saveTableToDB(self, tableName, path, overwrite=False):
-        '''save the main data table 'CSVdata' to SQL db on disk, 
-        takes filename'''
-        
-        newdb = sqlite3.connect(path)
-        if overwrite:
-            newdb.execute("drop table if exists {}".format(tableName))
-        query = "".join(line for line in self.mainconout.iterdump())
-        newdb.executescript(query)
 
     def indexTable(self, indexName, tableName, indexCol):
         '''index the main database'''
@@ -233,8 +237,17 @@ class DataInterface():
     def close(self):
         '''close the db connection'''
         self.maincon.close()
-
-    def filter(self, column, path, table1, table2, geom1, geom2):
+        
+    def dropTable(self, tableName):
+        '''simple table drop'''
+        try:
+            cur = self.maincon.cursor()
+        except AttributeError:
+            raise AttributeError('SQL connection not established') 
+        cur.execute('DROP TABLE {}'.format(tableName))
+        
+    def filter(self, srcCol, path, srcTable, maskTable, srcGeoCol, maskGeoCol):
+        '''column is the name of the column to return on a match'''
         try:
             cur = self.maincon.cursor()
         except AttributeError:
@@ -244,17 +257,52 @@ class DataInterface():
         cur.execute(sql)
         
         try:
-            cur.execute('SELECT {}.{} FROM db.{}'.format(table2, geom2, table2) )
+            cur.execute('SELECT {}.{} FROM db.{}'.format(maskTable, maskGeoCol, maskTable) )
         except sqlite3.OperationalError:
+            logging.critical('Failed to attach database "{}": table querry failed'.format(path))
             raise sqlite3.OperationalError('Database {} attach failed'.format(path))
-            
-        sql = "SELECT {}.{} FROM {}, {} WHERE Within({}.{}, {}.{})".format(table1, column, table1, table2, table1, geom1, table2, geom2)
+        
+        #use spatialindex for querry. diff on gsoy set 100s down to 75s
+        sql = "SELECT {} ".format(srcCol)
+        sql += "FROM {} AS s, db.{} AS m ".format(srcTable, maskTable)
+        sql += "WHERE Within(s.{}, m.{}) = 1 ".format( srcGeoCol, maskGeoCol)
+        sql += "AND m.ROWID IN (SELECT ROWID FROM SpatialIndex WHERE " 
+        sql += "f_table_name = 'DB=db.{}' AND search_frame = m.{})".format(maskTable, maskGeoCol)
         cur.execute(sql)
+        
         result = [ str(list(i)[0]) for i in cur.fetchall()]
         cur.execute('DETACH db')
         self.maincon.commit
         return result
     
+    def applyFunction(self, keyCol, keySet, xLable, yLable, outputTable, function):
+        '''Get the data for the entries in the teySet list. 
+        keyCol is the name for the column that keySet is querried,
+        xLable, yLable is the cols to pull data,
+        outputTable, outputCol is what sql table and col to park the results
+        function is the function to apply to each dataset
+        '''
+        try:
+            cur = self.maincon.cursor()
+        except AttributeError:
+            raise AttributeError('SQL connection not established') 
+        
+        #create a column for the result, process the first data entry
+        #to get the dictionary keys to put in the table        
+        data = self.pullXYData(keyCol, keySet[0], xLable, yLable)
+        result = function(data)
+        for keyName in result:
+            sql = "ALTER TABLE {} ADD {} FLOAT".format(outputTable, keyName)
+            cur.execute(sql)
+        
+        #now pull the data for real
+        for key in keySet:
+            data = self.pullXYData(keyCol, key, xLable, yLable)
+            result = function(data)
+            for item in result:
+                sql = "UPDATE {} SET {} = {} WHERE {} = '{}'".format(outputTable, item, result[item], keyCol, key)
+                cur.execute(sql)    
+        self.maincon.commit()
         
         
 '''the following function is taken from 
@@ -287,8 +335,6 @@ def spatialite_connect(*args, **kwargs):
             break
     if not found:
         raise RuntimeError("Cannot find any suitable spatialite module")
-    
-    
     cur.close()
     con.enable_load_extension(False)
     return con
