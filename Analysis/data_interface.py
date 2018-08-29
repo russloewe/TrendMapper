@@ -31,19 +31,17 @@ class DataInterface():
                 os.remove(path)
             except:
                 pass
-            
-        self.mainTableName = 'CSVdata'
+                
         newdb = spatialite_connect(path)
         cur = newdb.cursor()
         
         if spatialite:
-            
             cur.execute('SELECT InitSpatialMetadata()')
             
-        cur.execute("CREATE TABLE {} (ID int PRIMARY KEY)".format(self.mainTableName) )
+        cur.execute("CREATE TABLE {} (ID int PRIMARY KEY)".format(mainTableName) )
         cur.execute("CREATE TABLE metadata (filename VARCHAR(200) UNIQUE)")
         for name in self.attributeNames:
-            cur.execute("ALTER TABLE CSVdata ADD {} VARCHAR(50)".format(name))
+            cur.execute("ALTER TABLE {} ADD {} VARCHAR(50)".format(mainTableName, name))
         newdb.commit()
         if connect:
             self.maincon = newdb
@@ -71,7 +69,7 @@ class DataInterface():
         if initSpatialite:
             cur.execute('SELECT InitSpatialMetadata()')            
         
-        sql = "SELECT AddGeometryColumn('{}', 'geom', 4326, 'POINT', 'XY');".format(indexName)
+        sql = "SELECT AddGeometryColumn('{}', 'GEOMETRY', 4326, 'POINT', 'XY');".format(indexName)
         cur.execute(sql)
         
         if keySubset == None:
@@ -84,8 +82,8 @@ class DataInterface():
             result = cur.fetchone()
             name = result[0]
             geom = "GeomFromText('POINT({} {})', 4326)".format(str(result[1]), str(result[2]))
-            params = (indexName, uniqueKey, 'geom', name, geom )
-            sql = "INSERT INTO {} ({}, geom) VALUES ('{}', {})".format(indexName, uniqueKey, name, geom)
+            params = (indexName, uniqueKey, 'GEOMETRY', name, geom )
+            sql = "INSERT INTO {} ({}, 'GEOMETRY') VALUES ('{}', {})".format(indexName, uniqueKey, name, geom)
             cur.execute(sql)
         self.maincon.commit()
 
@@ -94,27 +92,33 @@ class DataInterface():
         self.maincon.close()
         self.maincon = None
     
-    def connectMainSQL(self, path, tableName=None):
+    def connectMainSQL(self, path, mainTableName=None):
         '''make a connection to a database on the disk'''
-        if tableName == None:
+        if mainTableName == None:
             if self.mainTableName == None:
+                logging.critical('Cannot connect to database without a main table specified')
                 raise AttributeError('Cannot connect to database without a main table specified')
-            tableName = self.mainTableName
+            mainTableName = self.mainTableName
         else:
-            self.mainTableName = tableName
+            self.mainTableName = mainTableName
         tmp = spatialite_connect(path)
         cur = tmp.cursor()
         cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        result = cur.fetchone()
-        if (result is None) or (tableName not in result):
-            self.maincon = None
-            raise sqlite3.OperationalError('No table {} in {}'.format(tableName, path))
-        cur.execute('PRAGMA table_info({})'.format(tableName))
+        result = [str(i[0]) for i in cur.fetchall()]
+       
+        if (result is None):
+            logging.critical('No tables in "{}".'.format(path))
+            raise sqlite3.OperationalError('No tables in "{}".'.format(path))
+        if (mainTableName not in result):
+            logging.critical('Table "{}" not in "{}".'.format(mainTableName, path))
+            raise sqlite3.OperationalError('Table "{}" not in "{}".'.format(mainTableName, path))
+        
+        cur.execute('PRAGMA table_info({})'.format(mainTableName))
         columns = [i[1] for i in cur.fetchall()]
         for attr in self.attributeNames:
             if attr not in columns:
                 self.maincon = None
-                raise sqlite3.OperationalError('Attribute {} not in table {} in {}'.format(attr, tableName, path))
+                raise sqlite3.OperationalError('Attribute {} not in table {} in {}'.format(attr, mainTableName, path))
         self.maincon = tmp
         
         
@@ -141,7 +145,7 @@ class DataInterface():
                 except KeyError:
                     return False #tell the calling function that the file cant load
                 sqlVals = tuple(to_db)
-                sqlStatement = "INSERT INTO CSVdata {} VALUES {};".format(self.attributeNamesTuple, sqlVals)
+                sqlStatement = "INSERT INTO {} {} VALUES {};".format(self.mainTableName, self.attributeNamesTuple, sqlVals)
                 cur.execute(sqlStatement)
         self.maincon.commit()
         return True
@@ -204,7 +208,7 @@ class DataInterface():
                 data.append((x, y))
         return data
         
-    def saveMainConToDB(self, path, overwrite=False):
+    def saveMainConToDB(self, path, attach=False, overwrite=False):
         '''save the main data table 'CSVdata' to SQL db on disk, 
         takes filename'''
         if overwrite:
@@ -215,8 +219,14 @@ class DataInterface():
             #newdb.execute("drop table if exists *")
         newdb = spatialite_connect(path)
         query = "".join(line for line in self.maincon.iterdump())
-        newdb.executescript(query)
+        try:
+            newdb.executescript(query)
+        except sqlite3.OperationalError as e:
+            logging.critical('Unable to dump database: {}. {} might already exist.'.format(str(e), path))
+            raise e
         newdb.commit()
+        if attach:
+            self.maincon = newdb
         return newdb
 
     def indexTable(self, indexName, tableName, indexCol):
