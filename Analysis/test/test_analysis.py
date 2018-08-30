@@ -93,6 +93,36 @@ class AnalysisTest(unittest.TestCase):
         self.assertTrue(abs(data1Ris - 0) < 0.00000001)
         self.assertTrue(abs(data2Ris - 0) < 0.00000001)
 
+    def test_mean(self):
+        '''Make sure we can find the mean for a dataset'''
+        data0 = self.testData[0]
+        data1 = self.testData[1]
+        data2 = self.testData[2]
+        
+        result0 = mean(data0)
+        result1 = mean(data1)
+        result2 = mean(data2)
+        
+        self.assertEqual(result0['mean'], 4.5)
+        self.assertEqual(result1['mean'], -1)
+        self.assertEqual(result2['mean'], 17.5)
+        
+    def test_meanbaddata(self):
+        '''Make sure mean raises right exception for bad data'''
+        data1 = [(1,1), (2,) , (3,9)]
+        data2 = []
+        try:
+            mean(data1)
+        except ValueError:
+            self.assertTrue(True)
+        else:
+            self.assertTrue(False)
+        try:
+            mean(data2)
+        except ValueError:
+            self.assertTrue(True)
+        else:
+            self.assertTrue(False)
         
     def tearDown(self):
         """Runs after each test."""
