@@ -38,8 +38,7 @@ def mean(data):
         x.append(x_val)
         y.append(y_val)
     if len(x) != len(y):
-        print "something went wrong, x y dim missmath"
-        return None
+        raise ValueError('Dimension mismatch on x,y series')
     a = numpy.mean(y)
     results = {'mean' : a}
     return(results)
