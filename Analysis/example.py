@@ -5,8 +5,7 @@ from analysis import calculateLinearRegression, mean
 #from Analysis.analysis import calculateLinearRegression, mean
 def runner1():
     ''' Load a folder of CSV files, index, save whole
-    db to disk.
-    Outcome: sql database is created on disk'''
+    db to disk.'''
     #startup the interface
     interface = DataInterface()
     
@@ -41,8 +40,7 @@ def runner1():
 
 def runner2():
     '''just copy the data and specified attributes from csv files 
-    to a sql databasa without any indecies or spaitalite. 
-    Outcome: database is created'''
+    to a sql databasa without any indecies or spaitalite. '''
     #startup the interface
     interface = DataInterface()
     
@@ -94,8 +92,7 @@ def runner3():
     
 def runner4():
     '''Load a geo database and get a list of the stations, then
-    get a list of the stations that are inside the contigous us.
-    Outcome: list of stations is printed to terminal'''
+    get a list of the stations that are inside the contigous us.'''
     
     #startup the interface
     interface = DataInterface()
