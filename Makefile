@@ -80,6 +80,7 @@ compile: $(COMPILED_RESOURCE_FILES)
 	$(LRELEASE) $<
 
 test: compile transcompile
+	rm -f .coverage
 	@echo
 	@echo "----------------------"
 	@echo "Regression Test Suite"
