@@ -2,8 +2,8 @@ import csv, sqlite3
 import os
 import logging
 logging.getLogger(__name__)
-FORMAT = '%(asctime)-15s {}: %(message)s'.format(__name__)
-logging.basicConfig(format=FORMAT, filename='{}.log'.format(__name__))
+FORMAT = '%(asctime)-15s:%(levelname)s: {}: %(message)s'.format(__name__)
+logging.basicConfig(format=FORMAT, filename='{}.log'.format(__name__), level=logging.INFO)
 class DataInterface():
     
     def __init__(self):
@@ -19,39 +19,55 @@ class DataInterface():
                 self.attributeNames.append(name)
         self.attributeNamesTuple = tuple(self.attributeNames)
             
-    def initSQL(self, path, spatialite=True, overwrite=False, connect=True, mainTableName='CSVdata'):
-        '''set up our initial tmp sql database in memory and init some tables
-        maintable: the name to load the incomming dataset, ie, the csv 
-        outtable:   the name for the table where well put the results of the analysis
-        meta table: name of files that have been loaded to prevent loading a file twice'''
+    def initSQL(self, path, spatialite=True, overwrite=False, 
+                connect=True, mainTableName='CSVdata'):
+        '''set up our initial tmp sql database in memory and init some 
+        tables maintable: the name to load the incomming dataset, ie, 
+        the csv outtable:   the name for the table where well put the
+        results of the analysis meta table: name of files that have 
+         been loaded to prevent loading a file twice'''
+        logging.info('Function called: initSQL("{}", spatialite={},'\
+                      'overwrite={}, connect={}, mainTableName="{}")'\
+                      .format(path, spatialite, overwrite, connect, 
+                      mainTableName))
         if len(self.attributeNames) < 1:
-            raise AttributeError("no attributes specified, cant init SQL")
+            logging.error("No attributes specified, cant init SQL")
+            raise AttributeError('No attributes specified, cant init'\
+                                 ' SQL')
         if overwrite:
-            try:
-                os.remove(path)
-            except:
-                pass
-                
+            eraseFile(path)
+        elif os.path.isfile(path):
+            logging.error('File: "{}" exists and overwrite is False'\
+                          .format(path))
+            raise IOError('File: "{}" exists and overwrite is False'\
+                          .format(path))
         newdb = spatialite_connect(path)
         cur = newdb.cursor()
-        
         if spatialite:
+            logging.info('Initializing Spatialite metadata for "{}".'\
+                         .format(path))
             cur.execute('SELECT InitSpatialMetadata()')
-            
-        cur.execute("CREATE TABLE {} (ID int PRIMARY KEY)".format(mainTableName) )
-        cur.execute("CREATE TABLE metadata (filename VARCHAR(200) UNIQUE)")
+        cur.execute("CREATE TABLE {} (ID int PRIMARY KEY)"\
+                    .format(mainTableName) )
+        cur.execute('CREATE TABLE metadata (filename VARCHAR(200)'\
+                    ' UNIQUE)')
         for name in self.attributeNames:
-            cur.execute("ALTER TABLE {} ADD {} VARCHAR(50)".format(mainTableName, name))
+            cur.execute("ALTER TABLE {} ADD {} VARCHAR(50)"\
+                        .format(mainTableName, name))
         newdb.commit()
         if connect:
+            logging.info('Setting "{}" as main DB connection'\
+                         .format(path))
+            logging.info('Setting "{}" as main data table'
+                         .format(mainTableName))
             self.maincon = newdb
             self.mainTableName = mainTableName
    
-    def createGeoTable(self, indexName, uniqueKey, xName, yName, keySubset=None, initSpatialite=False):
+    def createGeoTable(self, indexName, uniqueKey, xName, yName,
+                       keySubset=None, initSpatialite=False):
         '''create a new table with a geometry point layer for 
         querrying by location
-        
-        
+
         plan- create new table, leave lat lon  cols'''
         try:
             cur = self.maincon.cursor()
@@ -246,7 +262,11 @@ class DataInterface():
 
     def close(self):
         '''close the db connection'''
-        self.maincon.close()
+        logging.info('Closing main database connection')
+        if self.maincon == None:
+            logging.warning('Error, no main database connection')
+        else:
+            self.maincon.close()
         
     def dropTable(self, tableName):
         '''simple table drop'''
@@ -267,10 +287,10 @@ class DataInterface():
         cur.execute(sql)
         
         try:
-            cur.execute('SELECT {}.{} FROM db.{}'.format(maskTable, maskGeoCol, maskTable) )
-        except sqlite3.OperationalError:
-            logging.critical('Failed to attach database "{}": table querry failed'.format(path))
-            raise sqlite3.OperationalError('Database {} attach failed'.format(path))
+            cur.execute('SELECT db.{}.{} FROM db.{}'.format(maskTable, maskGeoCol, maskTable) )
+        except sqlite3.OperationalError as e:
+            logging.critical('Failed to attach database "{}": table querry failed: "{}"'.format(path, str(e)))
+            raise sqlite3.OperationalError('Database {} attach failed: "{}"'.format(path, str(e)))
         
         #use spatialindex for querry. diff on gsoy set 100s down to 75s
         sql = "SELECT {} ".format(srcCol)
@@ -313,7 +333,19 @@ class DataInterface():
                 sql = "UPDATE {} SET {} = {} WHERE {} = '{}'".format(outputTable, item, result[item], keyCol, key)
                 cur.execute(sql)    
         self.maincon.commit()
-        
+
+def eraseFile(path):
+    '''Remove a file if it exists'''
+    logging.info('Function called: eraseFile("{}")'.format(path))
+    try:
+        os.remove(path)
+    except:
+        logging.warning('Exception trying to remove file',  exc_info=True)
+    if os.path.isfile(path):
+        logging.error("Could not remove '{}' from disk".format(path))
+        raise IOError("Could not remove '{}' from disk".format(path))
+    else:
+        logging.info('File: "{}" removed'.format(path))
         
 '''the following function is taken from 
 https://github.com/qgis/QGIS 
