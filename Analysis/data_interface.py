@@ -10,14 +10,30 @@ class DataInterface():
         self.attributeNames = []
         self.mainTableName = None
         self.outTableName = None
+        self.maincon = None
         
     def setAttributeNames(self, names):
         '''add attributes to an array that will be copied from 
         the input CSV to the SQL database'''
+        logging.info('Function called: setAttributeNames("{}")'\
+                                                        .format(names))
         for name in names:
             if name not in self.attributeNames:
                 self.attributeNames.append(name)
         self.attributeNamesTuple = tuple(self.attributeNames)
+    
+    def getMainCur(self):
+        '''Raise an error if there is no main database connection'''
+        logging.info('Function call: checkMainCon()')
+        if self.maincon == None:
+            logging.error('Main connection is none')
+            raise AttributeError('No main database connection')
+        try:
+            cur = self.maincon.cursor()
+        except AttributeError:
+            logging.error('Could not get cursor for main database')
+            raise AttributeError('Could not get cursor for main DB')
+        return cur
             
     def initSQL(self, path, spatialite=True, overwrite=False, 
                 connect=True, mainTableName='CSVdata'):
@@ -26,7 +42,7 @@ class DataInterface():
         the csv outtable:   the name for the table where well put the
         results of the analysis meta table: name of files that have 
          been loaded to prevent loading a file twice'''
-        logging.info('Function called: initSQL("{}", spatialite={},'\
+        logging.info('Function call: initSQL("{}", spatialite={},'\
                       'overwrite={}, connect={}, mainTableName="{}")'\
                       .format(path, spatialite, overwrite, connect, 
                       mainTableName))
@@ -63,29 +79,33 @@ class DataInterface():
             self.maincon = newdb
             self.mainTableName = mainTableName
    
-    def createGeoTable(self, indexName, uniqueKey, xName, yName,
+    def createGeoTable(self, tableName, uniqueKey, xName, yName,
                        keySubset=None, initSpatialite=False):
         '''create a new table with a geometry point layer for 
         querrying by location
 
         plan- create new table, leave lat lon  cols'''
+        logging.info('Function call: ("{}", "{}", "{}", "{}",'\
+                     ' keySubset={}, initSpatialite={})'.format(
+                     tableName, uniqueKey, xName, yName, keySubset,
+                     initSpatialite))
+        cur = self.getMainCur()
+        
         try:
-            cur = self.maincon.cursor()
-        except AttributeError:
-            raise AttributeError('SQL connection not established')
-        try:
-            cur.execute('CREATE TABLE {} ({} VARCHAR(50))'.format(indexName, uniqueKey))
+            cur.execute('CREATE TABLE {} ({} VARCHAR(50), {} FLOAT, '\
+                        '{} FLOAT)'.format(tableName, uniqueKey,
+                                           xName, yName))
         except sqlite3.OperationalError as e:
-            if str(e) == 'table {} already exists'.format(indexName):
-                return
-            else:
-                raise sqlite3.OperationalError(str(e))
-
+            logging.error('Unable to create table: "{}"'.format(
+                          tableName), exc_info=True)
+            raise e
         #init spaital lite or pass if it already has metadata
         if initSpatialite:
-            cur.execute('SELECT InitSpatialMetadata()')            
-        
-        sql = "SELECT AddGeometryColumn('{}', 'GEOMETRY', 4326, 'POINT', 'XY');".format(indexName)
+            logging.info('Initializing Spatialite metadata for "{}".'\
+                         .format(path))
+            cur.execute('SELECT InitSpatialMetadata()')
+        sql = "SELECT AddGeometryColumn('{}', 'GEOMETRY', 4326, "\
+              "'POINT', 'XY');".format(tableName)
         cur.execute(sql)
         
         if keySubset == None:
@@ -94,12 +114,16 @@ class DataInterface():
             keyList = keySubset
        
         for k in keyList:
-            cur.execute("SELECT {}, {}, {} FROM {} WHERE {} == '{}' LIMIT 1;".format(uniqueKey, xName, yName, self.mainTableName, uniqueKey, k))
+            cur.execute("SELECT {}, {}, {} FROM {} WHERE {} == '{}' "\
+                        "LIMIT 1;".format(uniqueKey, xName, yName,
+                                     self.mainTableName, uniqueKey, k))
             result = cur.fetchone()
             name = result[0]
-            geom = "GeomFromText('POINT({} {})', 4326)".format(str(result[1]), str(result[2]))
-            params = (indexName, uniqueKey, 'GEOMETRY', name, geom )
-            sql = "INSERT INTO {} ({}, 'GEOMETRY') VALUES ('{}', {})".format(indexName, uniqueKey, name, geom)
+            geom = "GeomFromText('POINT({} {})', 4326)".format(
+                                        str(result[1]), str(result[2]))
+            params = (tableName, uniqueKey, 'GEOMETRY', name, geom )
+            sql = "INSERT INTO {} ({}, 'GEOMETRY') VALUES ('{}', {})"\
+                            .format(tableName, uniqueKey, name, geom)
             cur.execute(sql)
         self.maincon.commit()
 
@@ -107,7 +131,18 @@ class DataInterface():
         '''close the sql connection'''
         self.maincon.close()
         self.maincon = None
-    
+        
+    def getTables(self):
+        '''Get a list of table from the main database'''
+        logging.info('Function call: getTables()')
+        cur = self.getMainCur()
+        sql = "SELECT name FROM sqlite_master WHERE type='table' ;"
+        cur.execute(sql)
+        results = [str(i[0]) for i in cur.fetchall()]
+        logging.info('Tables found in main DB: "{}"'.format(results))
+        return(results)
+        
+        
     def connectMainSQL(self, path, mainTableName=None):
         '''make a connection to a database on the disk'''
         if mainTableName == None:
@@ -141,10 +176,8 @@ class DataInterface():
     def loadCSV(self, filePath):
         '''take the path of a csv file and import the rows into a sql 
         database'''
-        try:
-            cur = self.maincon.cursor()
-        except AttributeError:
-            raise AttributeError('SQL connection not established')
+        logging.info('Loadinf file: "{}"'.format(filePath))
+        cur = self.getMainCur()
         try:
             #if the file has been loaded, skip
             cur.execute('INSERT INTO metadata (filename) VALUES (?)', (filePath,))
@@ -194,12 +227,14 @@ class DataInterface():
     def pullUniqueKeys(self, column, tableName=None, indexName=None):
         ''' grab a list of all the unique names in the given
         column'''
+        logging.info('Function call: pullUniqueKeys("{}", '\
+                     'tableName={}, indexName={})'.format(column,
+                                                tableName, indexName))
         if tableName is None:
             tableName = self.mainTableName
-        try:
-            cur = self.maincon.cursor()
-        except AttributeError:
-            raise AttributeError('SQL connection not established')
+            logging.info('Using table name: "{}"'.format(
+                                                    self.mainTableName))
+        cur = self.getMainCur()
         if indexName is not None:
             cur.execute('SELECT DISTINCT {} from {} WITH(INDEX({}))'.format(column,tableName, indexName))
         else:
@@ -210,10 +245,7 @@ class DataInterface():
     def pullXYData(self, keyCol, keyName, xName, yName):
         '''Get data set for specific keyname'''
         data = []
-        try:
-            cur = self.maincon.cursor()
-        except AttributeError:
-            raise AttributeError('SQL connection not established')
+        cur = self.getMainCur()
         cur.execute('SELECT {}, {} FROM CSVdata WHERE {} == "{}"'.format(xName, yName, keyCol, keyName))
         for row in cur:
             if (row[0] == '') or  (row[1] == ''):
