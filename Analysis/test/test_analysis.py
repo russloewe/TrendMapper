@@ -74,6 +74,11 @@ class AnalysisTest(unittest.TestCase):
         data2 = []
         try:
             calculateLinearRegression(data1)
+        except ValueError as e:
+            self.assertTrue(True)
+        else:
+            self.assertTrue(False)
+        try:
             calculateLinearRegression(data2)
         except ValueError:
             self.assertTrue(True)

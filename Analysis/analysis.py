@@ -15,8 +15,6 @@ def calculateLinearRegression(dataSet, includeStats=False):
         x_val,y_val = data_point  #unpack tuple
         x.append(x_val)
         y.append(y_val)
-    if len(x) != len(y):
-        raise ValueError('Dimension mismatch on x,y series')
     A = numpy.vstack([x, numpy.ones(len(x))]).T
     linearFitResult = numpy.linalg.lstsq(A,y)
     slope, intercept = linearFitResult[0]
@@ -37,8 +35,6 @@ def mean(data):
         x_val,y_val = data_point  #unpack tuple
         x.append(x_val)
         y.append(y_val)
-    if len(x) != len(y):
-        raise ValueError('Dimension mismatch on x,y series')
     a = numpy.mean(y)
     results = {'mean' : a}
     return(results)
@@ -54,6 +50,3 @@ def calculateRisidualSum(dataSet, slope, intercept):
         risidual += risd
     return(risidual)
 
-    
-if __name__ == "__main__":
-    pass
