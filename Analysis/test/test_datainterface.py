@@ -222,6 +222,100 @@ class DataInterfaceTest(unittest.TestCase):
         interface.close()
             
     ##############################################################
+    #connectMainSQL
+    
+    def test_connectMainSQL(self):
+        '''Make sure we can connect to an sql table on the disk'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION', 'TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.connectMainSQL('./Analysis/test/geodata.db', 
+                                           mainTableName = 'dataTable')
+        self.assertTrue('dataTable' in interface.getTables())
+        interface.close()
+        
+    def test_connectMainSQL_nofile(self):
+        '''Make sure we dont create a new file if there is no file 
+        on the disk'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION', 'TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        try:
+            interface.connectMainSQL('./Analysis/test/nofile.db', 
+                                           mainTableName = 'dataTable')
+        except IOError:
+            pass
+        else:
+            self.fail('An IOError exception should have been raised')
+            
+    def test_connectMainSQL_badtable(self):
+        '''Make sure that we handle connecting to db with wrong 
+        table name'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION', 'TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        try:
+            interface.connectMainSQL('./Analysis/test/geodata.db', 
+                                           mainTableName = 'wrongtable')
+        except AttributeError:
+            pass
+        else:
+            self.fail('There should have been a',
+                                ' sqlite3.OperationalError raised')
+        
+    def test_connectMainSQL_nomaintable(self):
+        '''Make sure we handle it when no main table is specified 
+        as a param and there is not a self.mainTableName yet'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION', 'TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        try:
+            interface.connectMainSQL('./Analysis/test/geodata.db')
+        except AttributeError:
+            pass
+        else:
+            self.fail('There should have been a',
+                                ' sqlite3.OperationalError raised')
+    
+    def test_connectMainSQL_noMainTable(self):
+        '''Make sure that using the fall back maintable name works'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION', 'TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.mainTableName = 'dataTable'
+        interface.connectMainSQL('./Analysis/test/geodata.db')
+        self.assertTrue('dataTable' in interface.getTables())
+        
+    def test_connectMainSQL_empytDB(self):
+        '''Make sure that using connecting to an empty 
+        database gives the right error'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION', 'TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        try:
+            interface.connectMainSQL('./Analysis/test/empty.db',
+                                mainTableName = 'dataTable')
+        except AttributeError:
+            pass
+        else:
+            self.fail('Last call should have raised an attributeerror')
+       
+    def test_connectMainSQL_wrongAttributeCol(self):
+        '''Make sure that using connecting to an empty 
+        database gives the right error'''
+        interface = DataInterface()
+        interface.setAttributeNames(['wrongattr', 'STATION', 'TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        try:
+            interface.connectMainSQL('./Analysis/test/geodata.db',
+                                        mainTableName = 'dataTable')
+        except AttributeError:
+            pass
+        else:
+            self.fail('Last call should have raised an attributeerror')
+            
+    ###############################################################
     def _test_loadMultipleFiles(self):
         '''Make sure a file cant be loaded twice'''
         val = self.interface.loadCSV('./Analysis/test/1.csv')

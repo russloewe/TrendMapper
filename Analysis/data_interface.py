@@ -148,31 +148,47 @@ class DataInterface():
         
     def connectMainSQL(self, path, mainTableName=None):
         '''make a connection to a database on the disk'''
+        logging.info('Function call: connectMainSQL("{}",'\
+                    ' mainTableName={})'.format(path, mainTableName))
+        if not os.path.isfile(path):
+            logging.error('No file "{}" found on disk'.format(path))
+            raise IOError('No file "{}" found on disk'.format(path))
         if mainTableName == None:
             if self.mainTableName == None:
-                logging.critical('Cannot connect to database without a main table specified')
-                raise AttributeError('Cannot connect to database without a main table specified')
+                logging.error('Cannot connect to database without '\
+                                               'a main table specified')
+                raise AttributeError('Cannot connect to database'\
+                                     ' without a main table specified')
             mainTableName = self.mainTableName
         else:
             self.mainTableName = mainTableName
+        #dont set the new connection as the main connection until
+        #we are sure that the database will work
         tmp = spatialite_connect(path)
         cur = tmp.cursor()
         cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
         result = [str(i[0]) for i in cur.fetchall()]
-       
-        if (result is None):
-            logging.critical('No tables in "{}".'.format(path))
-            raise sqlite3.OperationalError('No tables in "{}".'.format(path))
-        if (mainTableName not in result):
-            logging.critical('Table "{}" not in "{}".'.format(mainTableName, path))
-            raise sqlite3.OperationalError('Table "{}" not in "{}".'.format(mainTableName, path))
         
+        #make sure the database we connect to is not empty and has the 
+        #right table
+        if (result is None) or (len(result) < 1):
+            logging.error('No tables in "{}".'.format(path))
+            raise AttributeError('No tables in "{}".'.format(path))
+        if (mainTableName not in result):
+            logging.error('Table "{}" not in "{}".'\
+                                        .format(mainTableName, path))
+            raise AttributeError('Table "{}" not in "{}".'\
+                                         .format(mainTableName, path))
+        
+        #make sure the main table in the database has the columns
+        # we need
         cur.execute('PRAGMA table_info({})'.format(mainTableName))
         columns = [i[1] for i in cur.fetchall()]
         for attr in self.attributeNames:
             if attr not in columns:
                 self.maincon = None
-                raise sqlite3.OperationalError('Attribute {} not in table {} in {}'.format(attr, mainTableName, path))
+                raise AttributeError('Attribute {} not in'\
+                   ' table {} in {}'.format(attr, mainTableName, path))
         self.maincon = tmp
         
         
