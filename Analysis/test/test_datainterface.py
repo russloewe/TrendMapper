@@ -49,6 +49,7 @@ class DataInterfaceTest(unittest.TestCase):
             pass
         else:
             self.fail('An error should have been raised')   
+        interface.close()
             
     
     def test_initSQL_overwriteFile(self):
@@ -65,6 +66,7 @@ class DataInterfaceTest(unittest.TestCase):
         interface.initSQL('./test.db', overwrite = True, 
                                         spatialite = False)
         self.assertEqual(type(interface.maincon), sqlite3.Connection)
+        interface.close()
         
     def test_initSQL_tableName(self):
         '''Make sure we can make a database with a different main table
@@ -74,6 +76,7 @@ class DataInterfaceTest(unittest.TestCase):
         interface.initSQL(':memory:', mainTableName = 'differentName')
         self.assertNotEqual(interface.maincon, None)
         self.assertEqual(interface.mainTableName, 'differentName')
+        interface.close()
         
     def test_initSQL_noconnect(self):
         '''Make sure we can initialize a database without connecting'''
@@ -81,6 +84,7 @@ class DataInterfaceTest(unittest.TestCase):
         interface.setAttributeNames(['DATE', 'TAVG'])
         interface.initSQL(':memory:', connect = False)
         self.assertEqual(interface.maincon, None)
+        interface.close()
         
     #############################################################
     #checkmaincon
@@ -105,6 +109,7 @@ class DataInterfaceTest(unittest.TestCase):
         interface.initSQL(':memory:')
         cur = interface.getMainCur()
         self.assertEqual(type(cur), sqlite3.Cursor)
+        interface.close()
     
     #############################################################
     #pullUniqueKeys
@@ -116,6 +121,7 @@ class DataInterfaceTest(unittest.TestCase):
         interface.initSQL(':memory:')
         interface.loadFolder('./Analysis/test')
         interface.pullUniqueKeys('STATION')
+        interface.close()
     
     #############################################################
     #createGeoTable
@@ -128,6 +134,7 @@ class DataInterfaceTest(unittest.TestCase):
         interface.createGeoTable('geomindex', 'STATION', 'LONGITUDE',
                                                           'LATITUDE')
         self.assertTrue('geomindex' in interface.getTables())
+        interface.close()
         
     def test_createGeoTable_keysubset(self):
         '''Test that the key subset param works'''
@@ -143,6 +150,7 @@ class DataInterfaceTest(unittest.TestCase):
         self.assertEqual(len(stations), 2)
         self.assertTrue('USR0000OECK' in stations)
         self.assertTrue('USR0000ONPR' in stations)
+        interface.close()
         
     def test_creatGeoTable_spatialite(self):
         '''Make a geotable on a database without spatialite metadata yet'''
@@ -156,6 +164,7 @@ class DataInterfaceTest(unittest.TestCase):
         stations = interface.pullUniqueKeys('STATION', 
                                                tableName = 'geomindex')
         self.assertEqual(len(stations), 63)
+        interface.close()
         
     def test_creatGeoTable_badTable(self):
         '''Make sure that right exceptions are raised for bad params'''
@@ -171,6 +180,22 @@ class DataInterfaceTest(unittest.TestCase):
             pass
         else:
             self.fail('No error, or wrong error raised')
+        try:
+            interface.createGeoTable('', 'Station', 
+                                           'LONGITUDE', 'LATITUDE')
+        except sqlite3.OperationalError:
+            pass
+        else:
+            self.fail('No error, or wrong error raised')
+        interface.mainTableName = 'wrongtable'
+        try:
+            interface.createGeoTable('geomindex', 'NotStation', 
+                                           'LONGITUDE', 'LATITUDE')
+        except AttributeError:
+            pass
+        else:
+            self.fail('AttributeError should have been raised')
+        interface.close()
             
     def test_creatGeoTable_noTable(self):
         '''Make sure that we catch no table'''
@@ -194,6 +219,7 @@ class DataInterfaceTest(unittest.TestCase):
             pass
         else:
             self.fail('Last call should have raised an attribute exception')
+        interface.close()
             
     ##############################################################
     def _test_loadMultipleFiles(self):

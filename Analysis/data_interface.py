@@ -9,7 +9,6 @@ class DataInterface():
     def __init__(self):
         self.attributeNames = []
         self.mainTableName = None
-        self.outTableName = None
         self.maincon = None
         
     def setAttributeNames(self, names):
@@ -90,13 +89,14 @@ class DataInterface():
                      tableName, uniqueKey, xName, yName, keySubset,
                      initSpatialite))
         cur = self.getMainCur()
+        #make sure the input table is good
         if self.mainTableName is None:
             logging.error('No main table specified, cannot create' \
                                                        'geo table')
             raise AttributeError('No main table specified')
         if self.mainTableName not in self.getTables():
             logging.error('No table "{}" in main database, cannot '\
-                      'create geo table.'.format(self.mainTableNames))
+                      'create geo table.'.format(self.mainTableName))
             raise AttributeError('No table "{}" in main'\
                             'database'.format(self.mainTableName))
         try:
@@ -134,11 +134,6 @@ class DataInterface():
                             .format(tableName, uniqueKey, name, geom)
             cur.execute(sql)
         self.maincon.commit()
-
-    def close(self):
-        '''close the sql connection'''
-        self.maincon.close()
-        self.maincon = None
         
     def getTables(self):
         '''Get a list of table from the main database'''
