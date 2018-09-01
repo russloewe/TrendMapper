@@ -22,22 +22,19 @@ class DataInterfaceTest(unittest.TestCase):
 
     def setUp(self):
         """Runs before each test."""
-        self.interface = DataInterface()
-        names = ['DATE', 'STATION', 'TAVG', 'NAME', 'LATITUDE', 'LONGITUDE']
-        self.interface.setAttributeNames(names)
-        self.interface.initSQL('')
-        self.interface.loadFolder('./Analysis/test/')
 
     def tearDown(self):
         """Runs after each test."""
-        self.interface.close()
-        self.interface = None
         try:
             os.remove('./Analysis/test/testout.csv')
         except:
             pass
         try:
             os.remove('./Analysis/test/testout.sqlite')
+        except:
+            pass
+        try:
+            os.remove('./test.db')
         except:
             pass
     ###########################################################
@@ -121,6 +118,7 @@ class DataInterfaceTest(unittest.TestCase):
         interface.pullUniqueKeys('STATION')
     
     #############################################################
+    #createGeoTable
     def test_createGeoTable(self):
         '''Test that we can make a geo table'''
         interface = DataInterface()
@@ -130,7 +128,73 @@ class DataInterfaceTest(unittest.TestCase):
         interface.createGeoTable('geomindex', 'STATION', 'LONGITUDE',
                                                           'LATITUDE')
         self.assertTrue('geomindex' in interface.getTables())
-    
+        
+    def test_createGeoTable_keysubset(self):
+        '''Test that the key subset param works'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION', 'TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        interface.createGeoTable('geomindex', 'STATION', 'LONGITUDE',
+                'LATITUDE', keySubset = ['USR0000OECK', 'USR0000ONPR'])
+        stations = interface.pullUniqueKeys('STATION', 
+                                               tableName = 'geomindex')
+        self.assertEqual(len(stations), 2)
+        self.assertTrue('USR0000OECK' in stations)
+        self.assertTrue('USR0000ONPR' in stations)
+        
+    def test_creatGeoTable_spatialite(self):
+        '''Make a geotable on a database without spatialite metadata yet'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION', 'TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:', spatialite = False)
+        interface.loadFolder('./Analysis/test')
+        interface.createGeoTable('geomindex', 'STATION', 'LONGITUDE',
+                                    'LATITUDE', initSpatialite = True)
+        stations = interface.pullUniqueKeys('STATION', 
+                                               tableName = 'geomindex')
+        self.assertEqual(len(stations), 63)
+        
+    def test_creatGeoTable_badTable(self):
+        '''Make sure that right exceptions are raised for bad params'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION', 'TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        try:
+            interface.createGeoTable('geomindex', 'NotStation', 
+                                           'LONGITUDE', 'LATITUDE')
+        except sqlite3.OperationalError:
+            pass
+        else:
+            self.fail('No error, or wrong error raised')
+            
+    def test_creatGeoTable_noTable(self):
+        '''Make sure that we catch no table'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION', 'TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        try:
+            interface.createGeoTable('geomindex', 'STATION', 
+                                           'LONGITUDE', 'LATITUDE')
+        except AttributeError:
+            pass
+        else:
+            self.fail('The last fuction should have thrown an' \
+                       ' an attribute execption')
+        interface.initSQL(':memory:')
+        interface.mainTableName = None
+        try:
+            interface.createGeoTable('geomindex', 'STATION', 
+                                           'LONGITUDE', 'LATITUDE')
+        except AttributeError:
+            pass
+        else:
+            self.fail('Last call should have raised an attribute exception')
+            
     ##############################################################
     def _test_loadMultipleFiles(self):
         '''Make sure a file cant be loaded twice'''

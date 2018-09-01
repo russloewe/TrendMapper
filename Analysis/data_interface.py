@@ -85,12 +85,20 @@ class DataInterface():
         querrying by location
 
         plan- create new table, leave lat lon  cols'''
-        logging.info('Function call: ("{}", "{}", "{}", "{}",'\
-                     ' keySubset={}, initSpatialite={})'.format(
+        logging.info('Function call: creatGeoTable("{}", "{}", "{}", '\
+                       '"{}", keySubset={}, initSpatialite={})'.format(
                      tableName, uniqueKey, xName, yName, keySubset,
                      initSpatialite))
         cur = self.getMainCur()
-        
+        if self.mainTableName is None:
+            logging.error('No main table specified, cannot create' \
+                                                       'geo table')
+            raise AttributeError('No main table specified')
+        if self.mainTableName not in self.getTables():
+            logging.error('No table "{}" in main database, cannot '\
+                      'create geo table.'.format(self.mainTableNames))
+            raise AttributeError('No table "{}" in main'\
+                            'database'.format(self.mainTableName))
         try:
             cur.execute('CREATE TABLE {} ({} VARCHAR(50), {} FLOAT, '\
                         '{} FLOAT)'.format(tableName, uniqueKey,
@@ -102,7 +110,7 @@ class DataInterface():
         #init spaital lite or pass if it already has metadata
         if initSpatialite:
             logging.info('Initializing Spatialite metadata for "{}".'\
-                         .format(path))
+                         .format(tableName))
             cur.execute('SELECT InitSpatialMetadata()')
         sql = "SELECT AddGeometryColumn('{}', 'GEOMETRY', 4326, "\
               "'POINT', 'XY');".format(tableName)
