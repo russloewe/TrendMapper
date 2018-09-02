@@ -397,7 +397,8 @@ class DataInterface():
         data = self.pullXYData(keyCol, keySet[0], xLable, yLable)
         result = function(data)
         for keyName in result:
-            sql = "ALTER TABLE {} ADD {} FLOAT".format(outputTable, keyName)
+            sql = "ALTER TABLE {} ADD {} FLOAT".format(outputTable, 
+                                                            keyName)
             cur.execute(sql)
         
         #now pull the data for real
@@ -405,7 +406,8 @@ class DataInterface():
             data = self.pullXYData(keyCol, key, xLable, yLable)
             result = function(data)
             for item in result:
-                sql = "UPDATE {} SET {} = {} WHERE {} = '{}'".format(outputTable, item, result[item], keyCol, key)
+                sql = "UPDATE {} SET {} = {} WHERE {} = '{}'"\
+                .format(outputTable, item, result[item], keyCol, key)
                 cur.execute(sql)    
         self.maincon.commit()
 
