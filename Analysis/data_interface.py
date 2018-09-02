@@ -145,6 +145,15 @@ class DataInterface():
         logging.info('Tables found in main DB: "{}"'.format(results))
         return(results)
         
+    def getTableAttributes(self, tableName):
+        '''Get a list of the attribute columns in a table'''
+        logging.info('Function call: getTableAttributes("{}")'.format(
+                                                    tableName))
+        cur = self.getMainCur()
+        cur.execute('PRAGMA table_info({})'.format(tableName))
+        columns = [i[1] for i in cur.fetchall()]
+        return(columns)
+        
         
     def connectMainSQL(self, path, mainTableName=None):
         '''make a connection to a database on the disk'''
@@ -318,17 +327,13 @@ class DataInterface():
 
     def indexTable(self, indexName, tableName, indexCol):
         '''index the main database'''
+        cur = self.getMainCur()
         try:
-            cur = self.maincon.cursor()
-        except AttributeError:
-            raise AttributeError('SQL connection not established') 
-        try:
-            cur.execute('CREATE INDEX {} ON {}({})'.format(indexName, tableName, indexCol))
+            cur.execute('CREATE INDEX {} ON {}({})'.format(indexName,
+                                                tableName, indexCol))
         except sqlite3.OperationalError as e:
-            if str(e) == 'index {} already exists'.format(indexName):
-                pass
-            else:
-                raise(sqlite3.OperationalError(str(e)))
+            logging.error('Could not create index', exc_info = True)
+            raise e
         self.maincon.commit()
 
     def close(self):
@@ -341,34 +346,36 @@ class DataInterface():
         
     def dropTable(self, tableName):
         '''simple table drop'''
-        try:
-            cur = self.maincon.cursor()
-        except AttributeError:
-            raise AttributeError('SQL connection not established') 
+        logging.info('Function call: dropTable("{}")'.format(tableName))
+        cur = self.getMainCur()
         cur.execute('DROP TABLE {}'.format(tableName))
         
-    def filter(self, srcCol, path, srcTable, maskTable, srcGeoCol, maskGeoCol):
+    def filter(self, srcCol, path, srcTable, maskTable, srcGeoCol, 
+                                                    maskGeoCol):
         '''column is the name of the column to return on a match'''
-        try:
-            cur = self.maincon.cursor()
-        except AttributeError:
-            raise AttributeError('SQL connection not established') 
-        
+        logging.info('Function call: filter("{}", "{}", "{}", "{}",'\
+                    ' "{}", "{}")'.format(srcCol, path, srcTable, 
+                                      maskTable, srcGeoCol, maskGeoCol))
+        cur = self.getMainCur()        
         sql = "ATTACH DATABASE '{}' AS 'db'".format(path)
         cur.execute(sql)
-        
         try:
-            cur.execute('SELECT db.{}.{} FROM db.{}'.format(maskTable, maskGeoCol, maskTable) )
+            cur.execute('SELECT db.{}.{} FROM db.{}'.format(maskTable, 
+                                            maskGeoCol, maskTable) )
         except sqlite3.OperationalError as e:
-            logging.critical('Failed to attach database "{}": table querry failed: "{}"'.format(path, str(e)))
-            raise sqlite3.OperationalError('Database {} attach failed: "{}"'.format(path, str(e)))
+            logging.critical('Failed to attach database "{}": table'\
+                            ' querry failed: "{}"'.format(path, str(e)))
+            raise sqlite3.OperationalError('Database {} attach '\
+                                    'failed: "{}"'.format(path, str(e)))
         
         #use spatialindex for querry. diff on gsoy set 100s down to 75s
         sql = "SELECT {} ".format(srcCol)
         sql += "FROM {} AS s, db.{} AS m ".format(srcTable, maskTable)
-        sql += "WHERE Within(s.{}, m.{}) = 1 ".format( srcGeoCol, maskGeoCol)
+        sql += "WHERE Within(s.{}, m.{}) = 1 ".format( srcGeoCol,
+                                                            maskGeoCol)
         sql += "AND m.ROWID IN (SELECT ROWID FROM SpatialIndex WHERE " 
-        sql += "f_table_name = 'DB=db.{}' AND search_frame = m.{})".format(maskTable, maskGeoCol)
+        sql += "f_table_name = 'DB=db.{}' AND search_frame = m.{})"\
+                                         .format(maskTable, maskGeoCol)
         cur.execute(sql)
         
         result = [ str(list(i)[0]) for i in cur.fetchall()]
@@ -376,18 +383,15 @@ class DataInterface():
         self.maincon.commit
         return result
     
-    def applyFunction(self, keyCol, keySet, xLable, yLable, outputTable, function):
+    def applyFunction(self, keyCol, keySet, xLable, yLable, 
+                                                outputTable, function):
         '''Get the data for the entries in the teySet list. 
         keyCol is the name for the column that keySet is querried,
         xLable, yLable is the cols to pull data,
-        outputTable, outputCol is what sql table and col to park the results
-        function is the function to apply to each dataset
+        outputTable, outputCol is what sql table and col to park the 
+        results function is the function to apply to each dataset
         '''
-        try:
-            cur = self.maincon.cursor()
-        except AttributeError:
-            raise AttributeError('SQL connection not established') 
-        
+        cur = self.getMainCur()        
         #create a column for the result, process the first data entry
         #to get the dictionary keys to put in the table        
         data = self.pullXYData(keyCol, keySet[0], xLable, yLable)
@@ -411,7 +415,8 @@ def eraseFile(path):
     try:
         os.remove(path)
     except:
-        logging.warning('Exception trying to remove file',  exc_info=True)
+        logging.warning('Exception trying to remove file', 
+                                                         exc_info=True)
     if os.path.isfile(path):
         logging.error("Could not remove '{}' from disk".format(path))
         raise IOError("Could not remove '{}' from disk".format(path))

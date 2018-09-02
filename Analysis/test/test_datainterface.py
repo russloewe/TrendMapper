@@ -13,7 +13,6 @@ __date__ = '2018-07-28'
 __copyright__ = 'Copyright 2018, Russell Loewe'
 
 import unittest, sqlite3, os, csv
-from Analysis.example import runner1
 from Analysis.data_interface import DataInterface
 
 
@@ -110,7 +109,25 @@ class DataInterfaceTest(unittest.TestCase):
         cur = interface.getMainCur()
         self.assertEqual(type(cur), sqlite3.Cursor)
         interface.close()
+    #############################################################
+    #indexTable
     
+    def test_indexTable_repeat(self):
+        '''Make sure if we try to make an index that already exists
+        that we get the right error'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        interface.indexTable('newIndex', 'CSVData', 'STATION')
+        try:
+            interface.indexTable('newIndex', 'CSVData', 'STATION')
+        except sqlite3.OperationalError:
+            pass
+        else:
+            self.fail('The last call should have raised an sqlite' \
+                            'operational error')
     #############################################################
     #pullUniqueKeys
     def test_pullUniqueKeys(self):
@@ -138,7 +155,19 @@ class DataInterfaceTest(unittest.TestCase):
                                                 indexName = 'newindex')
         self.assertEqual(len(stations), 63)
         interface.close()
+    #############################################################
+    #dropTable
     
+    def test_dropTable(self):
+        '''Make sure the drop table function works'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        interface.dropTable('CSVData')
+        self.assertTrue('CSVData' not in interface.getTables())
+        
     #############################################################
     #createGeoTable
     def test_createGeoTable(self):
@@ -502,29 +531,79 @@ class DataInterfaceTest(unittest.TestCase):
         
    
    ##################################################################
-            
-    def _test_writesqlout(self):
-        '''make sure that the databases are written out correctly'''
-        self.interface.saveMainConToDB('./Analysis/test/testout.sqlite', overwrite=False)
-        tmp = DataInterface()
-        names = ['DATE', 'STATION', 'TAVG', 'NAME', 'LATITUDE', 'LONGITUDE']
-        tmp.setAttributeNames(names)
-        tmp.initSQL('')
-        try:
-            tmp.connectMainSQL('./Analysis/test/testout.sqlite')
-        except sqlite3.OperationalError:
-            self.assertTrue(False)
-        else:
-            self.assertTrue(True)
-
-
-    def _test_filter(self):
-        '''make sure the filter location works'''
-        self.interface.createGeoTable('geomindex', 'STATION', 'LONGITUDE', 'LATITUDE')
-        result = self.interface.filter('STATION', './Analysis/test/states.sqlite', 'geomindex', 'states', 'GEOMETRY' , 'GEOMETRY')
+    #filter
+    def test_filter(self):
+        '''make sure the filter by location works'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        interface.createGeoTable('geomindex', 'STATION',
+                                                'LONGITUDE', 'LATITUDE')
+        result = interface.filter('STATION', 
+        './Analysis/test/states.sqlite', 'geomindex', 'states',
+                                        'GEOMETRY' , 'GEOMETRY')
         self.assertEqual(len(result), 60)
         self.assertFalse('TEST' in result)
         
+    def test_filter_badmasktable(self):
+        '''make sure the filter by location catches bad
+        params'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        interface.createGeoTable('geomindex', 'STATION',
+                                                'LONGITUDE', 'LATITUDE')
+        try:
+            interface.filter('STATION', './Analysis/test/states.sqlite',
+                      'geomindex', 'badTable', 'GEOMETRY' , 'GEOMETRY')
+        except sqlite3.OperationalError:
+            pass
+        else:
+            self.fail('Sqlite op error should have been raised')
+    
+    def test_filter_badfile(self):
+        '''make sure the filter by location catches bad filename'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        interface.createGeoTable('geomindex', 'STATION',
+                                                'LONGITUDE', 'LATITUDE')
+        try:
+            interface.filter('STATION', './Analysis/test/nofile.sqlite',
+                        'geomindex', 'states', 'GEOMETRY' , 'GEOMETRY')
+        except sqlite3.OperationalError:
+            pass
+        else:
+            self.fail('Sqlite op error should have been raised')
+            
+    ################################################################
+    #applyFunction
+    
+    def test_applyFunction(self):
+        '''Make sure that we can apply a fuction to the dataset'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        interface.createGeoTable('geoTable', 'STATION',
+                                                'LONGITUDE', 'LATITUDE')
+        stations = interface.pullUniqueKeys('STATION',
+                                                tableName = 'geoTable')
+        interface.applyFunction('STATION', stations, 'DATE', 'TAVG', 
+                                    'geoTable', lambda x : {'result':1}) 
+        if 'result' not in interface.getTableAttributes('geoTable'):
+            self.fail('result column not present in dest Table')
+        rs = interface.pullUniqueKeys('result', tableName = 'geoTable')
+        print rs
+        self.assertTrue( '1.0' in rs)
+    
         
 if __name__ == "__main__":
     suite = unittest.makeSuite(DataInterfaceTest)
