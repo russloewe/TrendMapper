@@ -195,12 +195,15 @@ class DataInterface():
     def loadCSV(self, filePath):
         '''take the path of a csv file and import the rows into a sql 
         database'''
-        logging.info('Loadinf file: "{}"'.format(filePath))
+        logging.info('Loading file: "{}"'.format(filePath))
         cur = self.getMainCur()
         try:
             #if the file has been loaded, skip
-            cur.execute('INSERT INTO metadata (filename) VALUES (?)', (filePath,))
+            cur.execute('INSERT INTO metadata (filename) VALUES (?)',
+                                                           (filePath,))
         except sqlite3.IntegrityError:
+            logging.warning('File "{}" already loaded to DB'\
+                                .format(filePath))
             return False
         
         with open(filePath, 'rb') as csvfile:
@@ -211,18 +214,18 @@ class DataInterface():
                     for name in self.attributeNames:
                         to_db.append(i[name])
                 except KeyError:
-                    return False #tell the calling function that the file cant load
+                    #tell the calling function that the file cant load
+                    return False
                 sqlVals = tuple(to_db)
-                sqlStatement = "INSERT INTO {} {} VALUES {};".format(self.mainTableName, self.attributeNamesTuple, sqlVals)
+                sqlStatement = "INSERT INTO {} {} VALUES {};"\
+                                           .format(self.mainTableName,
+                                    self.attributeNamesTuple, sqlVals)
                 cur.execute(sqlStatement)
         self.maincon.commit()
         return True
     
     def writeTableToCSV(self, path, tableName):
-        try:
-            cur = self.maincon.cursor()
-        except AttributeError:
-            raise AttributeError('SQL connection not established')
+        cur = self.getMainCur()
         with open(path, 'w') as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=',',
                             quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -255,17 +258,35 @@ class DataInterface():
                                                     self.mainTableName))
         cur = self.getMainCur()
         if indexName is not None:
-            cur.execute('SELECT DISTINCT {} from {} WITH(INDEX({}))'.format(column,tableName, indexName))
+            cur.execute('SELECT DISTINCT {} from {} INDEXED BY {}'\
+                                   .format(column,tableName, indexName))
         else:
-            cur.execute('SELECT DISTINCT {} from {}'.format(column,tableName))
+            cur.execute('SELECT DISTINCT {} from {}'.format(column, 
+                                                        tableName))
         result = [ str(list(i)[0]) for i in cur.fetchall()]
         return result
         
-    def pullXYData(self, keyCol, keyName, xName, yName):
+    def pullXYData(self, keyCol, keyName, xName, yName, 
+                                tableName=None, indexName=None):
         '''Get data set for specific keyname'''
+        logging.info('Function call: pullXYData("{}", "{}", "{}", '\
+                            '"{}", tableName={}, indexName={})'.format(
+                            keyCol, keyName, xName, yName, tableName,
+                                                       indexName))
         data = []
         cur = self.getMainCur()
-        cur.execute('SELECT {}, {} FROM CSVdata WHERE {} == "{}"'.format(xName, yName, keyCol, keyName))
+        if tableName is None:
+            tableName = self.mainTableName
+            logging.info('Using table name: "{}"'.format(
+                                                    self.mainTableName))
+        if indexName is not None:
+            cur.execute('SELECT {}, {} FROM {} INDEXED BY {} '\
+                    'WHERE {} == "{}"'.format(xName, yName, tableName,
+                                        indexName, keyCol, keyName))
+        else:
+            cur.execute('SELECT {}, {} FROM {} WHERE {} == "{}"'\
+                                    .format(xName, yName, tableName,
+                                         keyCol, keyName))
         for row in cur:
             if (row[0] == '') or  (row[1] == ''):
                 pass
@@ -278,18 +299,17 @@ class DataInterface():
     def saveMainConToDB(self, path, attach=False, overwrite=False):
         '''save the main data table 'CSVdata' to SQL db on disk, 
         takes filename'''
+        logging.info('Function call: saveMainConToDB("{}", attach={},'\
+                        'overwrite={})'.format(path, attach, overwrite))
         if overwrite:
-            try:
-                os.remove(path)
-            except:
-                pass
-            #newdb.execute("drop table if exists *")
+            eraseFile(path)
         newdb = spatialite_connect(path)
         query = "".join(line for line in self.maincon.iterdump())
         try:
             newdb.executescript(query)
         except sqlite3.OperationalError as e:
-            logging.critical('Unable to dump database: {}. {} might already exist.'.format(str(e), path))
+            logging.error('Unable to dump database: {}. {} might'\
+                              ' already exist.'.format(str(e), path))
             raise e
         newdb.commit()
         if attach:

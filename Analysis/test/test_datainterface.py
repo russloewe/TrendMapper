@@ -120,7 +120,23 @@ class DataInterfaceTest(unittest.TestCase):
                                      'LONGITUDE', 'LATITUDE'])
         interface.initSQL(':memory:')
         interface.loadFolder('./Analysis/test')
-        interface.pullUniqueKeys('STATION')
+        stations = interface.pullUniqueKeys('STATION')
+        self.assertEqual(len(stations), 63)
+        interface.close()
+    
+    def test_pullUniqueKeys_useIndex(self):
+        '''Make sure that we get can use an index when getting 
+        unique keys'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        interface.indexTable('newindex', interface.mainTableName,
+                                                            'STATION')
+        stations = interface.pullUniqueKeys('STATION', 
+                                                indexName = 'newindex')
+        self.assertEqual(len(stations), 63)
         interface.close()
     
     #############################################################
@@ -316,41 +332,69 @@ class DataInterfaceTest(unittest.TestCase):
             self.fail('Last call should have raised an attributeerror')
             
     ###############################################################
-    def _test_loadMultipleFiles(self):
-        '''Make sure a file cant be loaded twice'''
-        val = self.interface.loadCSV('./Analysis/test/1.csv')
-        self.assertFalse(val)
+    #loadCSV
     
-    def _test_loadIncompatableFiles(self):
-        '''Make sure that we dont load a file with bad columns'''
-        tmp = DataInterface()
-        names = ['DATE', 'STATION', 'TAVG', 'NAME', 'LATITUDE', 'LONGITUDE']
-        tmp.setAttributeNames(names)
-        tmp.initSQL('')
-        val = tmp.loadCSV('./Analysis/test/s2.csv')
-        self.assertFalse(val)
+    def test_loadCSV_repeatedFiles(self):
+        '''Make sure we handle trying to load the same file 
+        twice correctly'''
+        interface = DataInterface()
+        interface.setAttributeNames([ 'STATION', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        self.assertTrue(interface.loadCSV('./Analysis/test/1.csv'))
+        self.assertFalse(interface.loadCSV('./Analysis/test/1.csv'))
         
-    def _test_UniqueKeys(self):
-        '''See that we can get the unique columns in SQL database'''
-        out = self.interface.pullUniqueKeys('STATION')
-        self.assertEqual(len(out) , 63)
-        self.interface.pullUniqueKeys('STATION', 'CSVData')
-        try:
-            self.interface.pullUniqueKeys('TTT')
-        except sqlite3.OperationalError:
-            self.assertTrue(True) 
-        else:
-            self.assertTrue(False) #was supposed to throw exception
+    def test_loadCSV_badFile(self):
+        '''Make sure we handle trying to load the same file 
+        twice correctly'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'notattr', 'TAVG'])
+        interface.initSQL(':memory:')
+        self.assertFalse(interface.loadCSV('./Analysis/test/s1.csv'))
         
-    def _test_attributeNamesLoaded(self):
-        '''Make sure that the attribute names were inserted into 
-        SQL '''
-        for name in ['DATE', 'STATION', 'TAVG', 'NAME', 'LATITUDE', 'LONGITUDE']:
-            self.interface.pullUniqueKeys(name)
+    def test_loadFolder(self):
+        '''Make sure we can load a folder and that all the 
+        attributes got loaded'''
+        interface = DataInterface()
+        names = ['DATE', 'STATION','TAVG', 'LONGITUDE', 'LATITUDE']
+        interface.setAttributeNames(names)
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        for name in names:
+            self.assertTrue(len(interface.pullUniqueKeys(name)) > 10)
+        
+    
+    ################################################################
+    #writeTableToCSV
+    
+    def test_writeTableToCSV(self):
+        '''Make sure we can export a table to a CSV file'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        interface.writeTableToCSV('./Analysis/test/testout.csv', 
+                                    interface.mainTableName)
+        c = 0
+        with open('./Analysis/test/testout.csv', 'r') as f:
+            dr = csv.DictReader(f)
+            for line in dr:
+                c += 1
+        self.assertEqual(c , 874)
 
-    def _test_pullxydata(self):
-        '''test that we can pull xy data for a station'''
-        data = self.interface.pullXYData('STATION', 'USR0000WALD', 'DATE', 'TAVG')
+    ################################################################
+    #pullXYData
+    
+    def test_pullXYData(self):
+        '''Make sure we can pull data'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        data = interface.pullXYData('STATION', 'USR0000WALD', 'DATE', 
+                                                              'TAVG')
         expected = [(1989, 43.6), (1995, 45.6), (2000, 45.1), 
                     (2001, 46.3), (2003, 47.3), (2005, 46.9), 
                     (2006, 46.7), (2007, 46.3), (2008, 45.2), 
@@ -362,50 +406,102 @@ class DataInterfaceTest(unittest.TestCase):
         self.assertEqual(len(intersect1), 0)
         self.assertEqual(len(intersect2), 0)
         
-    def _test_nosql(self):
-        '''Make sure that error is thrown if we forget to init sql or 
-        set attributes'''
-        tmp = DataInterface()
+    def test_pullXYData_useIndex(self):
+        '''Make sure we can create an index and use it to pull data'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        interface.indexTable('newIndex', interface.mainTableName,
+                                                    'STATION')
+        data = interface.pullXYData('STATION', 'USR0000WALD', 'DATE', 
+                                    'TAVG', indexName = 'newIndex')
+        self.assertEqual(len(data), 15)
+        #this next station has a blank 'TAVG' entry, make sure 
+        data = interface.pullXYData('STATION', 'USR0000CKLA', 'DATE', 
+                                    'TAVG', indexName = 'newIndex') 
+        self.assertEqual(len(data), 12)
+       
+       
+    def test_pullUniqueKeys_wrongIndex(self):
+        '''Make sure we get the right error if we try to use a 
+        non existant index or the wrong index'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
         try:
-            tmp.loadFolder('./Analysis/test/')
-        except AttributeError:
-            self.assertTrue(True)
-        else:
-            self.assertTrue(False)
-        
-    def _test_noattr(self):
-        '''Make sure error is raised trying to init sql before
-        attribute'''
-        tmp = DataInterface()
-        try:
-            tmp.initSQL('')
-        except AttributeError:
-            self.assertTrue(True)
-        else:
-            self.assertTrue(False)
-        
-    def _test_writecsv(self):
-        '''make sure we can write out a csv'''
-        self.interface.writeTableToCSV('./Analysis/test/testout.csv', self.interface.mainTableName)
-        c = 0
-        with open('./Analysis/test/testout.csv', 'r') as f:
-            dr = csv.DictReader(f)
-            for line in dr:
-                c += 1
-        self.assertEqual(c , 874)
-        
-    def _test_emptydb(self):
-        '''Make sure we handle at empty SQL db'''
-        tmp = DataInterface()
-        names = ['DATE', 'STATION', 'TAVG', 'NAME', 'LATITUDE', 'LONGITUDE']
-        tmp.setAttributeNames(names)
-        tmp.initSQL('')
-        try:
-            tmp.connectMainSQL('./Analysis/test/empty.db', 'mainDBtable')
+            interface.pullXYData('STATION', 'USR0000CKLA', 
+                        'DATE', 'TAVG', indexName = 'noIndex')
         except sqlite3.OperationalError:
-            self.assertTrue(True)
+            pass
         else:
-            self.assertTrue(False)
+            self.fail('There should have been an "no index" execption'\
+                                                            'raised')
+        interface.indexTable('newIndex', interface.mainTableName,
+                                                    'LATITUDE')
+        try:
+            interface.pullXYData('STATION', 'USR0000CKLA', 
+                        'DATE', 'TAVG', indexName = 'newIndex')
+        except sqlite3.OperationalError:
+            pass
+        else:
+            self.fail('There should have been an sqlite operational'\
+                                                            'error')
+    #################################################################
+    #writeMainConToDB
+    
+    def test_writeMainConToDB_disk(self):
+        '''Make sure we can write the main database connection to
+        a database on the disk'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        interface.saveMainConToDB('./Analysis/test/testout.sqlite')
+        
+        if not os.path.isfile('./Analysis/test/testout.sqlite'):
+            self.fail('No file on disk after trying to save database')
+        interface.connectMainSQL('./Analysis/test/testout.sqlite')
+        self.assertTrue(interface.mainTableName in interface.getTables())
+        
+    def test_writeMainConToDB_diskoverwrite(self):
+        '''Make sure we can write the main database connection to
+        a database on the disk and overwrite it'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.initSQL(':memory:')
+        interface.loadFolder('./Analysis/test')
+        #save a database
+        interface.saveMainConToDB('./Analysis/test/testout.sqlite')
+        self.assertTrue('differentTable' not in interface.getTables())
+        interface.initSQL(':memory:', mainTableName = 'differentTable')
+        interface.saveMainConToDB('./Analysis/test/testout.sqlite',
+                                            overwrite = True)
+        interface.connectMainSQL('./Analysis/test/testout.sqlite')
+        self.assertTrue('differentTable' in interface.getTables())
+        
+    def test_writeMainConToDB_memattach(self):
+        '''Make sure we can write a database from the disk to mem
+        and connect to it'''
+        interface = DataInterface()
+        interface.setAttributeNames(['DATE', 'STATION','TAVG', 
+                                     'LONGITUDE', 'LATITUDE'])
+        interface.connectMainSQL('./Analysis/test/geodata.db', 
+                                    mainTableName = 'dataTable')
+        #save a ref to the current db con
+        con = interface.maincon
+        interface.saveMainConToDB(':memory:', attach = True)
+        con2 = interface.maincon
+        self.assertNotEqual(con, con2)
+        self.assertTrue('dataTable' in interface.getTables())
+        
+   
+   ##################################################################
             
     def _test_writesqlout(self):
         '''make sure that the databases are written out correctly'''
@@ -420,38 +516,7 @@ class DataInterfaceTest(unittest.TestCase):
             self.assertTrue(False)
         else:
             self.assertTrue(True)
-            
-        
-        
-    def _test_geomindex(self):
-        '''make sure we can create a geo table for our data'''
-        self.interface.createGeoTable('geomindex', 'STATION', 'LONGITUDE', 'LATITUDE')
-        
-        list1 = self.interface.pullUniqueKeys('STATION')
-        list2 = self.interface.pullUniqueKeys( 'STATION', tableName='geomindex')
-        intersect1 = set(list1).symmetric_difference(list2)
-        intersect2 = set(list2).symmetric_difference(list1)
-        self.assertEqual(len(intersect1), 0)
-        self.assertEqual(len(intersect2), 0)
-        #make sure geometry is not none
-        list3 = self.interface.pullUniqueKeys( 'GEOMETRY', tableName='geomindex')
-        self.assertFalse('None' in list3)
-        self.interface.createGeoTable('geomindex', 'STATION', 'LONGITUDE', 'LATITUDE') #make sure it doesnt trip up running twice
-        
-        #make sure that it can index a plain sql db
-        interface = DataInterface()
-        names = ['DATE', 'STATION', 'TAVG', 'NAME', 'LATITUDE', 'LONGITUDE']
-        interface.setAttributeNames(names)
-        interface.initSQL('', spatialite=False)
-        interface.loadFolder('./Analysis/test/')
-        interface.createGeoTable('geomindex', 'STATION', 'LONGITUDE', 'LATITUDE', initSpatialite=True)
 
-        
-    def _test_index(self):
-        '''Make sure that the sql column indexer works'''
-        self.interface.indexTable('stationIndex', self.interface.mainTableName, 'STATION')
-        self.interface.indexTable('stationIndex', self.interface.mainTableName, 'STATION')
-        stations = self.interface.pullUniqueKeys('STATION')
 
     def _test_filter(self):
         '''make sure the filter location works'''
