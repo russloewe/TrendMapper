@@ -121,13 +121,7 @@ class DataInterfaceTest(unittest.TestCase):
         interface.initSQL(':memory:')
         interface.loadFolder('./Analysis/test')
         interface.indexTable('newIndex', 'CSVData', 'STATION')
-        try:
-            interface.indexTable('newIndex', 'CSVData', 'STATION')
-        except sqlite3.OperationalError:
-            pass
-        else:
-            self.fail('The last call should have raised an sqlite' \
-                            'operational error')
+        interface.indexTable('newIndex', 'CSVData', 'STATION')
     #############################################################
     #pullUniqueKeys
     def test_pullUniqueKeys(self):
@@ -601,7 +595,6 @@ class DataInterfaceTest(unittest.TestCase):
         if 'result' not in interface.getTableAttributes('geoTable'):
             self.fail('result column not present in dest Table')
         rs = interface.pullUniqueKeys('result', tableName = 'geoTable')
-        print rs
         self.assertTrue( '1.0' in rs)
     
         

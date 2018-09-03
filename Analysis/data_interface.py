@@ -332,8 +332,7 @@ class DataInterface():
             cur.execute('CREATE INDEX {} ON {}({})'.format(indexName,
                                                 tableName, indexCol))
         except sqlite3.OperationalError as e:
-            logging.error('Could not create index', exc_info = True)
-            raise e
+            logging.warning('Could not create index', exc_info = True)
         self.maincon.commit()
 
     def close(self):
