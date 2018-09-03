@@ -3,7 +3,7 @@ import os
 import logging
 logging.getLogger(__name__)
 FORMAT = '%(asctime)-15s:%(levelname)s: {}: %(message)s'.format(__name__)
-logging.basicConfig(format=FORMAT, filename='{}.log'.format(__name__), level=logging.INFO)
+logging.basicConfig(format=FORMAT, filename='{}.log'.format(__name__), level=logging.WARNING)
 class DataInterface():
     
     def __init__(self):
