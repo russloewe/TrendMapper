@@ -342,6 +342,19 @@ class DataInterface():
             logging.warning('Error, no main database connection')
         else:
             self.maincon.close()
+    def attachDB(self, path, name):
+        '''Attach a database'''
+        cur = self.getMainCur()
+        sql = "ATTACH DATABASE '{}' AS '{}'".format(path, name)
+        cur.execute(sql)
+        self.maincon.commit()
+        
+    def detachDB(self, name):
+        '''detach the database'''
+        cur = self.getMainCur()
+        sql = "DETACH {}".format(name)
+        cur.execute(sql)
+        self.maincon.commit()
         
     def dropTable(self, tableName):
         '''simple table drop'''
@@ -356,8 +369,7 @@ class DataInterface():
                     ' "{}", "{}")'.format(srcCol, path, srcTable, 
                                       maskTable, srcGeoCol, maskGeoCol))
         cur = self.getMainCur()        
-        sql = "ATTACH DATABASE '{}' AS 'db'".format(path)
-        cur.execute(sql)
+        self.attachDB(path, 'db')
         try:
             cur.execute('SELECT db.{}.{} FROM db.{}'.format(maskTable, 
                                             maskGeoCol, maskTable) )
@@ -378,7 +390,7 @@ class DataInterface():
         cur.execute(sql)
         
         result = [ str(list(i)[0]) for i in cur.fetchall()]
-        cur.execute('DETACH db')
+        self.detachDB('db')
         self.maincon.commit
         return result
     
