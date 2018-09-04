@@ -128,7 +128,7 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
          data.'''
         self.inputLayerCombo.currentIndexChanged.connect(
                                         callback_function)
-         
+
     def outputMessage(self, message):
         ''' Take text data from analysis output an display to 
         the user. Unsure as yet whether to us popup or messagebox on

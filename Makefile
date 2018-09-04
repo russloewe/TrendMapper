@@ -38,7 +38,7 @@ LOCALES =
 # translation
 SOURCES = \
 	__init__.py \
-	trend_mapper.py trend_mapper_dialog.py
+	trend_mapper.py trend_mapper_dialog.py analysis.py
 
 PLUGINNAME = TrendMapper
 
