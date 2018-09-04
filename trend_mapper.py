@@ -22,6 +22,8 @@
 """
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
 from PyQt4.QtGui import QAction, QIcon
+from PyQt4.QtSql import QSqlDatabase
+from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI, QgsFeatureRequest
 # Initialize Qt resources from file resources.py
 import resources
 # Import the code for the dialog
@@ -220,4 +222,47 @@ class TrendMapper:
         if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
-            pass
+            inputLayer = self.dlg.getInputLayer()
+            keyCol = self.dlg.getCategoryCombo()
+            xField = self.dlg.getXFieldCombo()
+            yField = self.dlg.getYFieldCombo()
+            outputLayer = self.dlg.getOutputLayerName()
+            
+            layer = getLayerByName(inputLayer)
+            
+            idx = layer.fieldNameIndex(keyCol)
+            stations = layer.uniqueValues(idx)
+            
+            xData = getDataSet(layer, keyCol, stations[0], xField)
+            yData = getDataSet(layer, keyCol, stations[0], yField)
+            
+            self.dlg.outputMessage("xData: {}, yData: {}".format(str(xData), str(yData)))
+            
+def getDataSet(layer, keyCol, keyName, field):
+    data = []
+    querry = "{} = '{}'".format(keyCol, keyName)
+    for feature in layer.getFeatures(QgsFeatureRequest().setFilterExpression(querry)):
+        data.append(feature.attribute(field))
+    return data
+    
+def getLayerByName(name):
+    layer=None
+    for lyr in QgsMapLayerRegistry.instance().mapLayers().values():
+        if lyr.name() == name:
+            layer = lyr
+            break
+    return layer
+            
+            
+            
+            
+            
+            #uri = QgsDataSourceURI()
+           # uri.setDatabase(outputLayer)
+            #schema = ''
+            #table = 'Towns'
+            #geom_column = 'GEOMETRY'
+            #uri.setDataSource(schema, table, geom_column)
+
+            #display_name = 'Towns'
+            #vlayer = QgsVectorLayer(uri.uri(), display_name, 'spatialite')
