@@ -20,12 +20,14 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
+from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QPyNullVariant
 from PyQt4.QtGui import QAction, QIcon
 from PyQt4.QtSql import QSqlDatabase
-from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI, QgsFeatureRequest
+from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI, QgsFeatureRequest, QgsField, QgsVectorLayer, QgsFeature
+from qgis.PyQt.QtCore import QVariant
 # Initialize Qt resources from file resources.py
 import resources
+from analysis import calculateLinearRegression
 # Import the code for the dialog
 from trend_mapper_dialog import TrendMapperDialog
 import os.path
@@ -220,29 +222,108 @@ class TrendMapper:
         # See if OK was pressed
         
         if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
-            inputLayer = self.dlg.getInputLayer()
+            # get all the data from the dialog
+            inputLayerName = self.dlg.getInputLayer()
             keyCol = self.dlg.getCategoryCombo()
             xField = self.dlg.getXFieldCombo()
             yField = self.dlg.getYFieldCombo()
-            outputLayer = self.dlg.getOutputLayerName()
+            outputLayerName = self.dlg.getOutputLayerName()
             
-            layer = getLayerByName(inputLayer)
+            #grab a reference to the input layer
+            layer = getLayerByName(inputLayerName)
+            #check that the x and y fields are numbers
+            if getColType(layer, xField) in [7,10]:
+                self.dlg.outputMessage("Error: Field '{}' is a text column".format(xField))
+                return
+            elif getColType(layer, yField) in [7,10]:
+                self.dlg.outputMessage("Error: Field '{}' is a text column".format(yField))
+                return
             
-            idx = layer.fieldNameIndex(keyCol)
-            stations = layer.uniqueValues(idx)
+            newLayer = createVectorLayer(layer, outputLayerName, [keyCol, xField, yField])
             
+            stations = getUniqueKeys(layer, keyCol)
             xData = getDataSet(layer, keyCol, stations[0], xField)
             yData = getDataSet(layer, keyCol, stations[0], yField)
+            self.dlg.outputMessage("{}   {}:{}  {}:{}".format(stations[0], xField, xData, yField, yData))
+            result = calculateLinearRegression(zip(xData, yData))
+            addResultFields(newLayer, result)
+            copyFeatures(layer, newLayer, keyCol, stations, [keyCol, xField, yField])
             
-            self.dlg.outputMessage("xData: {}, yData: {}".format(str(xData), str(yData)))
+            self.dlg.outputMessage(str(result))
+
+def copyFeatures(srcLayer, dstLayer, keyCol, featureList, attributes):
+    dstFields = dstLayer.pendingFields()
+    newFeatures = []
+    for name in featureList:
+        querry = "{} = '{}'".format(keyCol, name)
+        srcFeatures = srcLayer.getFeatures(QgsFeatureRequest().setFilterExpression(querry))
+        for feature in srcFeatures:
+            srcFeature = None
+            if feature.geometry() is not None:
+                srcFeature = feature
+                break
+            if srcFeature == None:
+                raise AttributeError("Could not get geometry for: {}".format(name))
+        newFeature = QgsFeature()
+        newFeature.setFields(dstFields)
+        newFeature.setGeometry(srcFeature.geometry())
+        for attr in attributes:
+            newFeature[attr] = srcFeature[attr]
+        newFeatures.append(newFeature)
+    dstLayer.startEditing()
+    dstLayer.addFeatures(newFeatures)
+    dstLayer.commitChanges()
+        
             
+
+def addResultFields(layer, result):
+    if layer.startEditing() == False:
+        raise AttributeError("Unable to start editing layer: {}".format(layer.name()))
+    for i in result:
+        if layer.dataProvider().addAttributes([QgsField(i, QVariant.Double)]) == False:
+            raise AttributeError("Unable to add '{}' to layer: {}".format(i, layer.name()))
+    if layer.updateFields() == False:
+        raise AttributeError("Unable to update fields for layer: {}".format(layer.name()))
+    if layer.commitChanges() == False:
+        raise AttributeError("Unable to commit changes to layer: {}".format(layer.name()))
+    
+def createVectorLayer(srcLayer, name, attributes, addToCanvas=True):
+    # create layer and copy some of the fields from the source layer
+    fields = srcLayer.pendingFields()
+    newFields = []
+    for i in fields:
+        if str(i.name()) in attributes:
+            newFields.append(i)
+    vl = QgsVectorLayer("Point", name, "memory")
+    pr = vl.dataProvider()
+    vl.startEditing()
+    pr.addAttributes( newFields )
+    vl.commitChanges()
+    if addToCanvas:
+        QgsMapLayerRegistry.instance().addMapLayer(vl)
+    return vl
+    
+    
+def getColType(layer, keyCol):
+    fields = layer.pendingFields()
+    for i in fields:
+        if str(i.name()) == keyCol:
+            return i.type()
+    return None
+    
+def getUniqueKeys(layer, keyCol):
+    idx = layer.fieldNameIndex(keyCol)
+    stations = layer.uniqueValues(idx)
+    return map(str, stations)
+
 def getDataSet(layer, keyCol, keyName, field):
     data = []
     querry = "{} = '{}'".format(keyCol, keyName)
     for feature in layer.getFeatures(QgsFeatureRequest().setFilterExpression(querry)):
-        data.append(feature.attribute(field))
+        value = feature.attribute(field)
+        if (type(value) is QPyNullVariant) :
+            value = ''
+        data.append(value)
     return data
     
 def getLayerByName(name):
@@ -255,14 +336,3 @@ def getLayerByName(name):
             
             
             
-            
-            
-            #uri = QgsDataSourceURI()
-           # uri.setDatabase(outputLayer)
-            #schema = ''
-            #table = 'Towns'
-            #geom_column = 'GEOMETRY'
-            #uri.setDataSource(schema, table, geom_column)
-
-            #display_name = 'Towns'
-            #vlayer = QgsVectorLayer(uri.uri(), display_name, 'spatialite')
