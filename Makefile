@@ -44,7 +44,7 @@ PLUGINNAME = TrendMapper
 
 PY_FILES = \
 	__init__.py \
-	trend_mapper.py trend_mapper_dialog.py
+	trend_mapper.py trend_mapper_dialog.py analysis.py
 
 UI_FILES = trend_mapper_dialog_base.ui
 
