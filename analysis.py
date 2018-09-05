@@ -13,15 +13,20 @@ def calculateLinearRegression(dataSet, includeStats=False):
         raise ValueError('No data points in dataset') 
     for data_point in dataSet:
         x_val,y_val = data_point  #unpack tuple
-        x.append(x_val)
-        y.append(y_val)
+        if (x_val == '') or (y_val == ''):
+            pass
+        else:
+            x.append(x_val)
+            y.append(y_val)
     A = numpy.vstack([x, numpy.ones(len(x))]).T
     linearFitResult = numpy.linalg.lstsq(A,y)
     slope, intercept = linearFitResult[0]
     if includeStats:
         rank = linearFitResult[2]
         risidualSum = calculateRisidualSum(dataSet,slope , intercept)
-        results = {'slope' : slope, 'intercept': intercept, 'rank' : rank, 'risidualSum': risidualSum, 'setsize' : len(dataSet)}
+        results = {'slope' : slope, 'intercept': intercept,
+         'rank' : rank, 'risidualSum': risidualSum,
+          'setsize' : len(dataSet)}
     else:
          results = {'slope' : slope, 'intercept': intercept}
     return(results)
