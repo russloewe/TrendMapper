@@ -16,7 +16,7 @@ import unittest
 
 from PyQt4.QtGui import QDialogButtonBox, QDialog
 from test.utilities import get_qgis_app
-from trend_mapper import TrendMapper
+from trend_mapper import TrendMapper, checkTrue
 from qgis.core import *
 from qgis.PyQt.QtCore import QVariant
 import random
@@ -41,9 +41,9 @@ class TrendMapperTest(unittest.TestCase):
         #create a test layer
         vl = QgsVectorLayer("Point", 'test', "memory")
         pr  = vl.dataProvider()
-        vl.startEditing()
+        checkTrue(vl.startEditing()) 
         pr.addAttributes( fields )
-        vl.commitChanges()
+        checkTrue(vl.commitChanges())
         #create a set of features
         transf = QgsCoordinateTransform(QgsCoordinateReferenceSystem(4326), QgsCoordinateReferenceSystem(32612))
         features = []
@@ -59,19 +59,17 @@ class TrendMapperTest(unittest.TestCase):
             feature['data1'] = random.uniform(-100, 100)
             feature['data2'] = random.randint(0,100)
         #add the feature to the canvas
-        vl.startEditing()
+        checkTrue(vl.startEditing())
         vl.dataProvider().addFeatures(features)
-        vl.commitChanges()
+        checkTrue(vl.commitChanges())
         QgsMapLayerRegistry.instance().addMapLayer(vl)
+        
         #set the category combo to the name field
-        index = self.trendmapper.dlg.categoryCombo.findText('name')
-        self.trendmapper.dlg.categoryCombo.setCurrentIndex(index)
+        self.trendmapper.dlg.getCategoryCombo = lambda : 'name'
         #set the xField combo
-        index = self.trendmapper.dlg.xFieldCombo.findText('data1')
-        self.trendmapper.dlg.xFieldCombo.setCurrentIndex(index)
+        self.trendmapper.dlg.getXFieldCombo = lambda : 'data1'
         #set the yField combo
-        index = self.trendmapper.dlg.yFieldCombo.findText('data2')
-        self.trendmapper.dlg.yFieldCombo.setCurrentIndex(index)
+        self.trendmapper.dlg.getYFieldCombo = lambda : 'data2'
 
     def tearDown(self):
         """Runs after each test."""
