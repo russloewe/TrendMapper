@@ -217,8 +217,9 @@ class TrendMapper:
         allLayers = [layer for layer in layers if layer.type() == 0]
         self.dlg.setLayerInputCombo([layer.name() for layer in allLayers])
        #pass the callback function for updating combos
-        self.dlg.setAttributeComboCallback(self.updateAttributeCombos)
-        self.updateAttributeCombos()
+        if not test_run:
+            self.dlg.setAttributeComboCallback(self.updateAttributeCombos)
+            self.updateAttributeCombos()
         
         
         # show the dialog
@@ -261,13 +262,17 @@ class TrendMapper:
             newLayer = createVectorLayer(layer, outputLayerName, [keyCol, xField, yField])
             
             stations = getUniqueKeys(layer, keyCol)
-            xData = getDataSet(layer, keyCol, stations[0], xField)
-            yData = getDataSet(layer, keyCol, stations[0], yField)
-           # self.message("{}   {}:{}  {}:{}".format(stations[0], xField, xData, yField, yData))
-            result = calculateLinearRegression(zip(xData, yData))
-            addResultFields(newLayer, result)
-            copyFeatures(layer, newLayer, keyCol, stations, [keyCol, xField, yField])
-            
+            if len(stations) < 1:
+                logging.error('No unique keys returned')
+                raise ValueError('No unique keys returned')
+            for st in stations:
+                xData = getDataSet(layer, keyCol, st, xField)
+                yData = getDataSet(layer, keyCol, st, yField)
+               # self.message("{}   {}:{}  {}:{}".format(stations[0], xField, xData, yField, yData))
+                result = calculateLinearRegression(zip(xData, yData))
+                addResultFields(newLayer, result)
+                copyFeatures(layer, newLayer, keyCol, stations, [keyCol, xField, yField])
+                addResults(newLayer, keyCol, st, result)
             #self.message(str(result))
 
 def copyFeatures(srcLayer, dstLayer, keyCol, featureList, attributes):
@@ -296,6 +301,9 @@ def copyFeatures(srcLayer, dstLayer, keyCol, featureList, attributes):
     
     :returns: nothing
     '''
+    logging.debug('copyFeatures("{}", "{}", "{}", "{}", "{}")'\
+                    .format(srcLayer, dstLayer, keyCol, featureList,
+                            attributes))
     dstFields = dstLayer.pendingFields()
     newFeatures = []
     for name in featureList:
@@ -315,11 +323,45 @@ def copyFeatures(srcLayer, dstLayer, keyCol, featureList, attributes):
         for attr in attributes:
             newFeature[attr] = srcFeature[attr]
         newFeatures.append(newFeature)
-    dstLayer.startEditing()
+    if dstLayer.startEditing() == False:
+        logging.error('Could not open {} for editing'.format(dstLayer.name()))
+        raise AttributeError('Could not open {} for editing'.format(dstLayer.name()))
     dstLayer.addFeatures(newFeatures)
     dstLayer.commitChanges()
         
-            
+        
+def addResults(layer, keyCol, keyName, results):
+    '''Add the results values to the layer
+    
+    :param layer: Layer that results are added 
+    :type layer: QgVectorLayer
+    
+    :param keyName: Name of feature to add results
+    :type keyName: str
+    
+    :param keyCol: Field to match keyName
+    :type keyCol: str
+    
+    :param results: Dict with result values and keys
+    :param results: dict
+    
+    :returns: nothing
+    '''
+    logging.debug('addResults({}, {}, {}, {})'.format(layer, keyName, 
+                                                    keyCol, results))
+    querry = "{} = '{}'".format(keyCol, keyName)
+    features = [f for f in layer.getFeatures(
+                       QgsFeatureRequest().setFilterExpression(querry))]
+    featureUpdates = {}
+    
+    if len(features) != 1:
+        raise ValueError("not exactly 1 feature in return array")
+    feature = features[0]
+    for index in results:
+        featureUpdates[feature.id()] = { index : results[index] }
+    provider = layer.dataProvider()
+    provider.changeAttributeValues( featureUpdates )
+
 
 def addResultFields(layer, result):
     ''' Add a float field in a layer for each dict key in results param
@@ -332,6 +374,7 @@ def addResultFields(layer, result):
     
     :returns: nothing
     '''
+    logging.debug('addResultFields({},{}'.format(layer, result))
     if layer.startEditing() == False:
         raise AttributeError("Unable to start editing layer: {}"\
                                                  .format(layer.name()))
@@ -369,6 +412,10 @@ def createVectorLayer(srcLayer, name, attributes, addToCanvas=True):
     :returns: The newly created vector layer
     :rtype: QgVectorLayer
     '''
+    if name == '':
+        name = "{}_new".format(str(srcLayer.name())) 
+    logging.debug('createVectorLayer("{}", "{}", "{}", addToCanvas={})'\
+                    .format(srcLayer, name, attributes, addToCanvas))
     fields = srcLayer.pendingFields()
     newFields = []
     #make a subset of the source layer fields
@@ -405,6 +452,7 @@ def getColType(layer, keyCol):
     :returns: The integer represention of the column type
     :rtype: int
     '''
+    logging.debug('getColType("{}", "{}")'.format(layer, keyCol))
     fields = layer.pendingFields()
     for i in fields:
         if str(i.name()) == keyCol:
@@ -424,9 +472,13 @@ def getUniqueKeys(layer, keyCol):
     :returns: List of the distinct values found.
     :rtype: array
     '''
+    logging.debug('getUniqueKeys("{}", "{}")'.format(layer, keyCol))
+    if int(layer.featureCount()) < 1:
+        raise AttributeError('No features in layer: {}'.format(layer.name()))
     idx = layer.fieldNameIndex(keyCol)
     stations = layer.uniqueValues(idx)
     stations = map(str, stations) #convert all the entries to strings
+    logging.debug(':getUniqueKeys return: {}'.format(stations))
     return stations
 
 def getDataSet(layer, keyCol, keyName, field):
@@ -448,6 +500,8 @@ def getDataSet(layer, keyCol, keyName, field):
         example: 'TAVG' or 'DATE' 
     :type field: str
     '''
+    logging.debug('getDataSet("{}", "{}", "{}", "{}")'.format(
+                                    layer, keyCol, keyName, field))                                
     data = []
     querry = "{} = '{}'".format(keyCol, keyName)
     for feature in layer.getFeatures(QgsFeatureRequest().setFilterExpression(querry)):
@@ -465,6 +519,7 @@ def getLayerByName(name):
     :returns: The layer object.
     :rtype: QgsVectorLayer
     '''
+    logging.debug('getLayerByName("{}")'.format(name))
     layer=None
     for lyr in QgsMapLayerRegistry.instance().mapLayers().values():
         if lyr.name() == name:
@@ -474,3 +529,9 @@ def getLayerByName(name):
             
             
             
+def checkTrue(fun):
+    def catcher(*args, **kargs):
+        result = fun(*args, **kargs)
+        if  result != True:
+            raise ValueError('{} returned {}'.format(fun.__name__, result))
+    return catcher
