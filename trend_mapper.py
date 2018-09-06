@@ -31,7 +31,10 @@ from analysis import calculateLinearRegression
 # Import the code for the dialog
 from trend_mapper_dialog import TrendMapperDialog
 import os.path
-
+import logging
+LOGGER = logging.getLogger('QGIS')
+FORMAT = '%(asctime)-15s:%(levelname)s: {}: %(message)s'.format(__name__)
+logging.basicConfig(format=FORMAT, filename='{}.log'.format(__name__), level=logging.DEBUG)
 
 class TrendMapper:
     """QGIS Plugin Implementation."""
@@ -49,7 +52,7 @@ class TrendMapper:
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
         # initialize locale
-        loc = QSettings().value('locale/userLocale')
+        loc = QSettings().value('locale/userLocale','en')
         locale = loc[0:2]
 
         locale_path = os.path.join(
@@ -203,8 +206,11 @@ class TrendMapper:
             self.dlg.setLayerAttributesCombos([field.name() for field in fields])
             
             
-
-    def run(self):
+    def message(self, message):
+        '''push a message to the status bar'''
+        self.iface.messageBar().pushMessage('Info', message, level = Qgis.info)
+        
+    def run(self, test_run=False):
         """Run method that performs all the real work"""
         
         layers = self.iface.legendInterface().layers()
@@ -218,25 +224,38 @@ class TrendMapper:
         # show the dialog
         self.dlg.show()
         # Run the dialog event loop
-        result = self.dlg.exec_()
+        if test_run:
+            result = True
+        else:
+            result = self.dlg.exec_()
         # See if OK was pressed
         
         if result:
+            logging.debug('runner called')
             # get all the data from the dialog
             inputLayerName = self.dlg.getInputLayer()
             keyCol = self.dlg.getCategoryCombo()
             xField = self.dlg.getXFieldCombo()
             yField = self.dlg.getYFieldCombo()
             outputLayerName = self.dlg.getOutputLayerName()
-            
+            logging.debug('''Trendmapper runner params:
+                        inputLayerName: {}
+                        keyCol: {}
+                        xField: {}
+                        yField: {}
+                        outputLayerName: {}'''.format(
+                        inputLayerName, keyCol, xField,
+                        yField, outputLayerName))
+                        
             #grab a reference to the input layer
             layer = getLayerByName(inputLayerName)
+            
             #check that the x and y fields are numbers
             if getColType(layer, xField) in [7,10]:
-                self.dlg.outputMessage("Error: Field '{}' is a text column".format(xField))
+                logging.error("Error: Field '{}' is a text column".format(xField))
                 return
             elif getColType(layer, yField) in [7,10]:
-                self.dlg.outputMessage("Error: Field '{}' is a text column".format(yField))
+                logging.error("Error: Field '{}' is a text column".format(yField))
                 return
             
             newLayer = createVectorLayer(layer, outputLayerName, [keyCol, xField, yField])
@@ -244,14 +263,39 @@ class TrendMapper:
             stations = getUniqueKeys(layer, keyCol)
             xData = getDataSet(layer, keyCol, stations[0], xField)
             yData = getDataSet(layer, keyCol, stations[0], yField)
-            self.dlg.outputMessage("{}   {}:{}  {}:{}".format(stations[0], xField, xData, yField, yData))
+           # self.message("{}   {}:{}  {}:{}".format(stations[0], xField, xData, yField, yData))
             result = calculateLinearRegression(zip(xData, yData))
             addResultFields(newLayer, result)
             copyFeatures(layer, newLayer, keyCol, stations, [keyCol, xField, yField])
             
-            self.dlg.outputMessage(str(result))
+            #self.message(str(result))
 
 def copyFeatures(srcLayer, dstLayer, keyCol, featureList, attributes):
+    '''Copy features form a source vector layer to a target layer. 
+    Only copy features whos value of the keyCol attribute is in the 
+    featureList array. When copying the features, only copy the 
+    attributes whos name is in the attribute array.
+    
+    :param srcLayer: Layer that features are going to be copied from.
+    :type srcLayer: QgVectorLayer
+    
+    :param dstLayer: Layer that features are going to be copied to
+    :type dstLayer: QgVectorLayer
+    
+    :param keyCol: The name of the attribute field that we are 
+        filtering our features by.
+    :type keyCol: str
+    
+    :param featureList: An array of the names of the features that we
+        are copying. Future feature: option of math expression
+    :type featureList: [str]
+    
+    :param attributes: List of the attributes that we want copied 
+        over with the feature.
+    :type attributes: [str]
+    
+    :returns: nothing
+    '''
     dstFields = dstLayer.pendingFields()
     newFeatures = []
     for name in featureList:
@@ -259,7 +303,8 @@ def copyFeatures(srcLayer, dstLayer, keyCol, featureList, attributes):
         srcFeatures = srcLayer.getFeatures(QgsFeatureRequest().setFilterExpression(querry))
         for feature in srcFeatures:
             srcFeature = None
-            if feature.geometry() is not None:
+            #skip the feature if it does not have geometry attribute
+            if feature.geometry() is not None: 
                 srcFeature = feature
                 break
             if srcFeature == None:
@@ -277,34 +322,89 @@ def copyFeatures(srcLayer, dstLayer, keyCol, featureList, attributes):
             
 
 def addResultFields(layer, result):
+    ''' Add a float field in a layer for each dict key in results param
+    
+    :param layer: The layer to add new fields to
+    :layer type: QgVectorLayer
+    
+    :param result: A dictionary of results from an analysis function
+    :type result: dict
+    
+    :returns: nothing
+    '''
     if layer.startEditing() == False:
-        raise AttributeError("Unable to start editing layer: {}".format(layer.name()))
+        raise AttributeError("Unable to start editing layer: {}"\
+                                                 .format(layer.name()))
     for i in result:
-        if layer.dataProvider().addAttributes([QgsField(i, QVariant.Double)]) == False:
-            raise AttributeError("Unable to add '{}' to layer: {}".format(i, layer.name()))
+        if layer.dataProvider().addAttributes([QgsField(i, 
+                                         QVariant.Double)]) == False:
+            raise AttributeError("Unable to add '{}' to layer: {}"\
+                                              .format(i, layer.name()))
     if layer.updateFields() == False:
-        raise AttributeError("Unable to update fields for layer: {}".format(layer.name()))
+        raise AttributeError("Unable to update fields for layer: {}"\
+                                                 .format(layer.name()))
     if layer.commitChanges() == False:
-        raise AttributeError("Unable to commit changes to layer: {}".format(layer.name()))
+        raise AttributeError("Unable to commit changes to layer: {}"\
+                                                 .format(layer.name()))
     
 def createVectorLayer(srcLayer, name, attributes, addToCanvas=True):
-    # create layer and copy some of the fields from the source layer
+    '''Create a new vector layer with geometry and selected fields 
+    from a source vector layer
+    
+    :param srcLayer: The layer that we will be copying geometry and 
+        fields from
+    :type srcLayer: QgVectorLayer
+    
+    :param name: The name for the new vector layer
+    :type name: str
+    
+    :param attributes: An array of attirbute names for which we will
+        be copying the corresponding fields
+    :type attributes: [str]
+    
+    :param addToCanvas: Optional flag to add the new layer to the 
+        qgis canvas map registry
+    :type addToCanvas: bool
+    
+    :returns: The newly created vector layer
+    :rtype: QgVectorLayer
+    '''
     fields = srcLayer.pendingFields()
     newFields = []
+    #make a subset of the source layer fields
     for i in fields:
         if str(i.name()) in attributes:
             newFields.append(i)
+    #create a new point layer
     vl = QgsVectorLayer("Point", name, "memory")
     pr = vl.dataProvider()
-    vl.startEditing()
+    #add the subset of fields to the new layer
+    if vl.startEditing() == False:
+        raise AttributeError("Unable to start editing layer: {}"\
+                                                 .format(vl.name()))
     pr.addAttributes( newFields )
-    vl.commitChanges()
+    if vl.commitChanges() == False:
+        raise AttributeError("Unable to commit changes to layer: {}"\
+                                                 .format(vl.name()))
     if addToCanvas:
         QgsMapLayerRegistry.instance().addMapLayer(vl)
     return vl
     
     
 def getColType(layer, keyCol):
+    ''' Get the type for an attribute column in a layer. Just returns
+    the integer representation. Use to quickly check if a field is 
+    numeric or text, values in [7,10] are text.
+    
+    :param layer: The layer containing the column to check
+    :type layer: QgVectorLayer
+    
+    :param keyCol: The name of the column to check
+    :type keyCol: str
+    
+    :returns: The integer represention of the column type
+    :rtype: int
+    '''
     fields = layer.pendingFields()
     for i in fields:
         if str(i.name()) == keyCol:
@@ -312,11 +412,42 @@ def getColType(layer, keyCol):
     return None
     
 def getUniqueKeys(layer, keyCol):
+    '''Get the list of distinct values from an attribute column
+    
+    :param layer: The layer to pull the distinct values from.
+    :type layer: QgVectorLayer
+    
+    :param keyCol: The name of the attribute column to pull the unique 
+        values from.
+    :type keyCol: str
+    
+    :returns: List of the distinct values found.
+    :rtype: array
+    '''
     idx = layer.fieldNameIndex(keyCol)
     stations = layer.uniqueValues(idx)
-    return map(str, stations)
+    stations = map(str, stations) #convert all the entries to strings
+    return stations
 
 def getDataSet(layer, keyCol, keyName, field):
+    '''Return all the values of an attirbute column for
+    features matching keyName in the keyCol attribute
+    
+    :param layer: The layer to pull the data from
+    :type layer: QgsVectorLayer
+    
+    :param keyCol: The attribute column that contians the name for 
+        which we are filtering, example: 'STATION' 
+    :type keyCol: str
+    
+    :param keyName: The name that we are looking to match in the 
+        keyCol, example: 'US000PDX' 
+    :type keyName: str
+    
+    :param field: The attribute column that we are pulling the data from
+        example: 'TAVG' or 'DATE' 
+    :type field: str
+    '''
     data = []
     querry = "{} = '{}'".format(keyCol, keyName)
     for feature in layer.getFeatures(QgsFeatureRequest().setFilterExpression(querry)):
@@ -327,6 +458,13 @@ def getDataSet(layer, keyCol, keyName, field):
     return data
     
 def getLayerByName(name):
+    '''Find the layer object in the map registry by the string name
+    
+    :param name: The name of the layer to find.
+    
+    :returns: The layer object.
+    :rtype: QgsVectorLayer
+    '''
     layer=None
     for lyr in QgsMapLayerRegistry.instance().mapLayers().values():
         if lyr.name() == name:
