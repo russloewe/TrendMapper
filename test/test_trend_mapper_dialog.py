@@ -15,7 +15,7 @@ __copyright__ = 'Copyright 2018, Russell Loewe'
 import unittest
 
 from PyQt4.QtGui import QDialogButtonBox, QDialog
-
+from test.utilities import get_qgis_app
 from trend_mapper_dialog import TrendMapperDialog
 
 from utilities import get_qgis_app
@@ -28,6 +28,8 @@ class TrendMapperDialogTest(unittest.TestCase):
     def setUp(self):
         """Runs before each test."""
         self.dialog = TrendMapperDialog(None)
+        QGIS_APP, CANVAS, IFACE, PARENT = get_qgis_app()
+        self.iface = IFACE
 
     def tearDown(self):
         """Runs after each test."""
@@ -136,6 +138,7 @@ class TrendMapperDialogTest(unittest.TestCase):
         self.dialog.inputLayerCombo.setCurrentIndex(0)
         self.dialog.inputLayerCombo.setCurrentIndex(1)
         self.assertEqual(self.test_number, 2)
+    
 
 if __name__ == "__main__":
     suite = unittest.makeSuite(TrendMapperDialogTest)
