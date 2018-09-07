@@ -30,7 +30,13 @@ from qgis.gui import QgsMapCanvasLayer
 LOGGER = logging.getLogger('QGIS')
 LOGGER.disabled = True
 
-
+class dummy():
+    def __init__(self):
+        pass
+    
+    def pushMessage(self, a, b):
+        pass
+        
 #noinspection PyMethodMayBeStatic,PyPep8Naming
 class QgisInterface(QObject):
     """Class to expose QGIS objects and functions to plugins.
@@ -204,3 +210,6 @@ class QgisInterface(QObject):
     def legendInterface(self):
         """Get the legend."""
         return self.canvas
+    
+    def messageBar(self):
+        return dummy()
