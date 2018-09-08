@@ -24,11 +24,11 @@ def calculateLinearRegression(dataSet, includeStats=False):
     if includeStats:
         rank = linearFitResult[2]
         risidualSum = calculateRisidualSum(dataSet,slope , intercept)
-        results = {'slope' : slope, 'intercept': intercept,
-         'rank' : rank, 'risidualSum': risidualSum,
+        results = {'slope' : float(slope), 'intercept': float(intercept),
+         'rank' : float(rank), 'risidualSum': float(risidualSum),
           'setsize' : len(dataSet)}
     else:
-         results = {'slope' : slope, 'intercept': intercept}
+         results = {'slope' : float(slope), 'intercept': float(intercept)}
     return(results)
 
 def mean(data):
