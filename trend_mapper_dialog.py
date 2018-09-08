@@ -44,26 +44,26 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         '''return vector layer from combo box for 
         analysis input
         returns string'''
-        return(unicode(self.inputLayerCombo.currentText()))
+        return(str(self.inputLayerCombo.currentText()))
         
     def getCategoryCombo(self):
         '''get category choice from combo box,
         this is the unique values for regression analysis.
         returns string'''
-        return(unicode(self.categoryCombo.currentText()))
+        return(str(self.categoryCombo.currentText()))
         
         
     def getXFieldCombo(self):
         '''get data column name for independent variable
         for regression analysis
         returns string'''
-        return(unicode(self.xFieldCombo.currentText()))
+        return(str(self.xFieldCombo.currentText()))
         
     def getYFieldCombo(self):
         '''get data column for dependent variable in 
         regresison analysis
         returns string'''
-        return(unicode(self.yFieldCombo.currentText()))
+        return(str(self.yFieldCombo.currentText()))
         
     def getDiscardBadFitOption(self):
         '''get checkbox status from Discard Bad Fit box.
