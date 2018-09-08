@@ -16,13 +16,24 @@ import unittest
 
 from PyQt4.QtGui import QDialogButtonBox, QDialog
 from test.utilities import get_qgis_app
-from trend_mapper import TrendMapper, checkTrue
+from trend_mapper import TrendMapper
 from qgis.core import *
 from qgis.PyQt.QtCore import QVariant
 import random
 
-from utilities import get_qgis_app
+#from utilities import get_qgis_app
 QGIS_APP, CANVAS, IFACE, PARENT = get_qgis_app()
+from tools import checkTrue
+import sys
+
+def trace(frame, event, arg):
+    print "%s, %s:%d" % (event, frame.f_code.co_filename, frame.f_lineno)
+    return trace
+
+import faulthandler
+faulthandler.enable()
+
+#sys.settrace(trace)
 
 
 class TrendMapperTest(unittest.TestCase):
@@ -35,7 +46,9 @@ class TrendMapperTest(unittest.TestCase):
                     add_to_menu = False, add_to_toolbar = None)
         
         #define the test fields
-        fields = [QgsField('data1', QVariant.Double), 
+        fields = [QgsField('LONGITUDE', QVariant.Double), 
+                  QgsField('LATITUDE', QVariant.Double),
+                  QgsField('data1', QVariant.Double),
                   QgsField('data2', QVariant.Int), 
                   QgsField('name', QVariant.String)   ]
         #create a test layer
@@ -47,17 +60,30 @@ class TrendMapperTest(unittest.TestCase):
         #create a set of features
         transf = QgsCoordinateTransform(QgsCoordinateReferenceSystem(4326), QgsCoordinateReferenceSystem(32612))
         features = []
-        names = ['one', 'two', 'three', 'four', 'five']
-        for name in names:
+        for i in range(50):
             x = random.uniform(-180, 180)
             y = random.uniform(-90, 90)
             feature = QgsFeature()
             feature.setFields(vl.fields())
             layerPoint = transf.transform(QgsPoint(x, y))
             feature.setGeometry(QgsGeometry.fromPoint(layerPoint))
+            if i%4 == 0:
+                name = 'one'
+            elif i%4 == 1:
+                name = 'two'
+            elif i%4 == 3:
+                name = 'three'
+            else:
+                name = 'four'
             feature['name'] = name
-            feature['data1'] = random.uniform(-100, 100)
+            if random.randint(0,100)%5 == 0:
+                feature['data1'] = None
+            elif random.randint(0,100)%5 == 0:
+                feature['data1'] = ''
+            else:
+                feature['data1'] = random.uniform(-100, 100)
             feature['data2'] = random.randint(0,100)
+            features.append(feature)
         #add the feature to the canvas
         checkTrue(vl.startEditing())
         vl.dataProvider().addFeatures(features)
@@ -70,12 +96,16 @@ class TrendMapperTest(unittest.TestCase):
         self.trendmapper.dlg.getXFieldCombo = lambda : 'data1'
         #set the yField combo
         self.trendmapper.dlg.getYFieldCombo = lambda : 'data2'
+            
+        self.layer = vl
+        
+        
 
     def tearDown(self):
         """Runs after each test."""
         self.trendmapper.dlg = None
         self.trendmapper = None
-        
+
     
     def test_dialoge(self):
         '''Test that the dialoge box loaded'''
@@ -84,7 +114,7 @@ class TrendMapperTest(unittest.TestCase):
     def test_run(self):
         '''Test that the run function works'''
         self.trendmapper.run(test_run = True)
-        
+  
 if __name__ == "__main__":
     suite = unittest.makeSuite(TrendMapperTest)
     runner = unittest.TextTestRunner(verbosity=2)
