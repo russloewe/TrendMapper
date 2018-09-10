@@ -32,9 +32,9 @@ from trend_mapper_tools import *
 # Import the code for the dialog
 from trend_mapper_dialog import TrendMapperDialog
 import os.path
-import logging
-FORMAT = '%(asctime)-15s: %(levelname)s: %(filename)s: %(funcName)s: %(lineno)s: %(message)s'
-logging.basicConfig(format=FORMAT, filename='trendmapper.log', level=logging.DEBUG)
+#import the custom logger
+from trend_mapper_logger import myLogger
+log = myLogger(myLogger.INFO)
 
 class TrendMapper:
     """QGIS Plugin Implementation."""
@@ -232,14 +232,14 @@ class TrendMapper:
         # See if OK was pressed
         
         if result:
-            logging.debug('runner called')
+            log.debug('runner called')
             # get all the data from the dialog
             inputLayerName = self.dlg.getInputLayer()
             keyCol = self.dlg.getCategoryCombo()
             xField = self.dlg.getXFieldCombo()
             yField = self.dlg.getYFieldCombo()
             outputLayerName = self.dlg.getOutputLayerName()
-            logging.debug('''Trendmapper runner params:
+            log.debug('''Trendmapper runner params:
                         inputLayerName: {}
                         keyCol: {}
                         xField: {}
@@ -247,18 +247,17 @@ class TrendMapper:
                         outputLayerName: {}'''.format(
                         inputLayerName, keyCol, xField,
                         yField, outputLayerName))
-                        
+            
             #grab a reference to the input layer
             layer = getLayerByName(inputLayerName)
-            
             #check that the x and y fields are numbers
             if getColType(layer, xField) in [7,10]:
-                logging.error("Error: Field '{}' is a text column".format(xField))
+                log.error("Error: Field '{}' is a text column".format(xField))
                 return
             elif getColType(layer, yField) in [7,10]:
-                logging.error("Error: Field '{}' is a text column".format(yField))
+                log.error("Error: Field '{}' is a text column".format(yField))
                 return
-                
+            
             dataSource = getData(layer, keyCol, [xField, yField])
             newLayer = createVectorLayer(layer, outputLayerName, [keyCol, 'LONGITUDE', 'LATITUDE'])
             result = analyze(calculateLinearRegression, dataSource)
