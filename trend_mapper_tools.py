@@ -1,14 +1,10 @@
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QPyNullVariant
-
 from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI, QgsFeatureRequest, QgsField, QgsVectorLayer, QgsFeature
 from qgis.PyQt.QtCore import QVariant
 # Initialize Qt resources from file resources.py
-
-
 import os.path
-import logging
-FORMAT = '%(asctime)-15s: %(levelname)s: %(filename)s: %(funcName)s: %(lineno)s: %(message)s'
-logging.basicConfig(format=FORMAT, filename='trendmapper.log', level=logging.DEBUG)
+from trend_mapper_logger import myLogger
+log = myLogger(myLogger.INFO)
 
 
 
@@ -19,7 +15,7 @@ def addFeatures(dstLayer, featureSource):
     attributes whos name is in the attribute array.
     
     '''
-    logging.debug('call("{}", "{}")'\
+    log.debug('call("{}", "{}")'\
                     .format(dstLayer, featureSource))
     dstFields = dstLayer.pendingFields()
     newFeatures = []
@@ -37,7 +33,7 @@ def addFeatures(dstLayer, featureSource):
                 newFeature[name] = feature[name]
         newFeatures.append(newFeature)
     if dstLayer.startEditing() == False:
-        logging.error('Could not open {} for editing'.format(dstLayer.name()))
+        log.error('Could not open {} for editing'.format(dstLayer.name()))
         raise AttributeError('Could not open {} for editing'.format(dstLayer.name()))
     dstLayer.addFeatures(newFeatures)
     dstLayer.commitChanges()
@@ -54,12 +50,12 @@ def addResultFields(layer, result):
     
     :returns: nothing
     '''
-    logging.debug('call({},{})'.format(layer, result))
+    log.debug('call({},{})'.format(layer, result))
     checkTrue( layer.startEditing() )
     #print 'Result: {}'.format(result)
     for i in result:
         if type(i) != str:
-            logging.error('Fieldname paramater: "{}" is not a str'.format(i))
+            log.error('Fieldname paramater: "{}" is not a str'.format(i))
             raise TypeError('Fieldname paramater: "{}" is not a str'.format(i))
         checkTrue(layer.dataProvider().addAttributes([QgsField(i, 
                                          QVariant.Double)]))
@@ -90,7 +86,7 @@ def createVectorLayer(srcLayer, name, attributes, addToCanvas=False):
     '''
     if name == '':
         name = "{}_new".format(str(srcLayer.name())) 
-    logging.debug('call("{}", "{}", "{}", addToCanvas={})'\
+    log.debug('call("{}", "{}", "{}", addToCanvas={})'\
                     .format(srcLayer, name, attributes, addToCanvas))
     fields = srcLayer.pendingFields()
     newFields = []
@@ -126,7 +122,7 @@ def getColType(layer, keyCol):
     :returns: The integer represention of the column type
     :rtype: int
     '''
-    logging.debug('call("{}", "{}")'.format(layer, keyCol))
+    log.debug('call("{}", "{}")'.format(layer, keyCol))
     fields = layer.pendingFields()
     for i in fields:
         if str(i.name()) == keyCol:
@@ -146,13 +142,13 @@ def getUniqueKeys(layer, keyCol):
     :returns: List of the distinct values found.
     :rtype: array
     '''
-    logging.debug('call("{}", "{}")'.format(layer, keyCol))
+    log.debug('call("{}", "{}")'.format(layer, keyCol))
     if int(layer.featureCount()) < 1:
         raise AttributeError('No features in layer: {}'.format(layer.name()))
     idx = layer.fieldNameIndex(keyCol)
     stations = layer.uniqueValues(idx)
     stations = map(str, stations) #convert all the entries to strings
-    logging.debug(':getUniqueKeys return: {}'.format(stations))
+    log.debug(':getUniqueKeys return: {}'.format(stations))
     return stations
 
 def getData(srcLayer, keyCol, dataCols):
@@ -176,9 +172,9 @@ def getData(srcLayer, keyCol, dataCols):
         each of the data fields provided in :param dataCols: in the 
         same order.
     :rtype: (QgsFeatureIter, [(float, float, ...), ...])'''
-    logging.debug('call("{}", "{}", {}'.format(srcLayer, keyCol, dataCols))
+    log.debug('call("{}", "{}", {}'.format(srcLayer, keyCol, dataCols))
     for keyName in getUniqueKeys(srcLayer, keyCol):
-        logging.debug('keyName: {}'.format(keyName))
+        log.debug('keyName: {}'.format(keyName))
         data = []
         querry = "{} = '{}'".format(keyCol, keyName)
         featureIter = srcLayer.getFeatures(QgsFeatureRequest().setFilterExpression(querry))
@@ -193,7 +189,7 @@ def getData(srcLayer, keyCol, dataCols):
             point = tuple(point)
             data.append(point)
         if len(data) < 1:
-            logging.error('No data in dataset')
+            log.error('No data in dataset')
             raise ValueError('No data in dataset')
         newFeatureIter =  srcLayer.getFeatures(QgsFeatureRequest().setFilterExpression(querry))
         yield (newFeatureIter, data) 
@@ -210,7 +206,7 @@ def analyze(function, dataIter):
     
     :returns: iterator object
     '''
-    logging.debug('call(funcName: {}, {})'.format(function.__name__, dataIter))
+    log.debug('call(funcName: {}, {})'.format(function.__name__, dataIter))
     #print 'DataIter: ', dataIter
     for item in dataIter:
        # print 'item: ', item
@@ -227,7 +223,7 @@ def getLayerByName(name):
     :returns: The layer object.
     :rtype: QgsVectorLayer
     '''
-    logging.debug('call("{}")'.format(name))
+    log.debug('call("{}")'.format(name))
     layer=None
     for lyr in QgsMapLayerRegistry.instance().mapLayers().values():
         if lyr.name() == name:
