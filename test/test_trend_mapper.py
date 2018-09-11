@@ -45,11 +45,12 @@ class TrendMapperTest(unittest.TestCase):
         self.trendmapper.add_action('icon.png', 'test', self.trendmapper.run,
                     add_to_menu = False, add_to_toolbar = None)
         
-        #define the test fields
+         #define the test fields
         fields = [QgsField('LONGITUDE', QVariant.Double), 
                   QgsField('LATITUDE', QVariant.Double),
-                  QgsField('data1', QVariant.Double),
-                  QgsField('data2', QVariant.Int), 
+                  QgsField('dataDouble', QVariant.Double),
+                  QgsField('dataInt', QVariant.Int), 
+                  QgsField('dataStr', QVariant.String),
                   QgsField('name', QVariant.String)   ]
         #create a test layer
         vl = QgsVectorLayer("Point", 'test', "memory")
@@ -60,44 +61,62 @@ class TrendMapperTest(unittest.TestCase):
         #create a set of features
         transf = QgsCoordinateTransform(QgsCoordinateReferenceSystem(4326), QgsCoordinateReferenceSystem(32612))
         features = []
+        #create 50 test features for the test
         for i in range(50):
-            x = random.uniform(-180, 180)
-            y = random.uniform(-90, 90)
+            #create feature with fields from parent layer
             feature = QgsFeature()
             feature.setFields(vl.fields())
+            #create a random geometry point in lat/lon domain
+            x = random.uniform(-180, 180)
+            y = random.uniform(-90, 90)
             layerPoint = transf.transform(QgsPoint(x, y))
             feature.setGeometry(QgsGeometry.fromPoint(layerPoint))
+            #give feature one of four names
             if i%4 == 0:
-                name = 'one'
+                #first feature has all valid values with str ints
+                feature['name'] = 'one'
+                feature['dataDouble'] = random.uniform(-100, 100)
+                feature['dataInt'] = random.randint(0,100)
+                feature['dataStr'] = "{}".format(random.randint(0,100))
             elif i%4 == 1:
-                name = 'two'
-            elif i%4 == 3:
-                name = 'three'
+                #second feature has all valid values with str float
+                feature['name'] = 'two'
+                feature['dataDouble'] = random.uniform(-100, 100)
+                feature['dataInt'] = random.randint(0,100)
+                feature['dataStr'] = "{}".format(random.uniform(0,100))
+            elif i%4 == 2:
+                #third feature will have sporadic gaps
+                feature['name'] = 'three'
+                if random.randint(0, 3) == 0:
+                    feature['dataDouble'] = ''
+                else:
+                    feature['dataDouble'] = random.uniform(-100, 100)
+                if random.randint(0, 3) == 0:
+                    feature['dataInt'] = ''
+                else:
+                    feature['dataInt'] = random.randint(0,100)
+                if random.randint(0, 3):
+                    feature['dataStr'] = "{}".format(random.uniform(0,100))
+                else:
+                    feature['dataStr'] = "text"
             else:
-                name = 'four'
-            feature['name'] = name
-            if random.randint(0,100)%5 == 0:
-                feature['data1'] = None
-            elif random.randint(0,100)%5 == 0:
-                feature['data1'] = ''
-            else:
-                feature['data1'] = random.uniform(-100, 100)
-            feature['data2'] = random.randint(0,100)
-            features.append(feature)
+                #fourth will have no data for double and str colum
+                feature['name'] = 'four'
+                feature['dataDouble'] = ''
+                feature['dataInt'] = random.randint(0,100)
+                feature['dataStr'] = ''
+            features.append(feature)        
         #add the feature to the canvas
         checkTrue(vl.startEditing())
         vl.dataProvider().addFeatures(features)
         checkTrue(vl.commitChanges())
         QgsMapLayerRegistry.instance().addMapLayer(vl)
+        self.layer = vl
         
         #set the category combo to the name field
         self.trendmapper.dlg.getCategoryCombo = lambda : 'name'
-        #set the xField combo
-        self.trendmapper.dlg.getXFieldCombo = lambda : 'data1'
-        #set the yField combo
-        self.trendmapper.dlg.getYFieldCombo = lambda : 'data2'
+        
             
-        self.layer = vl
         
         
 
@@ -111,8 +130,28 @@ class TrendMapperTest(unittest.TestCase):
         '''Test that the dialoge box loaded'''
         self.assertTrue(self.trendmapper.dlg is not None)
 
-    def test_run(self):
-        '''Test that the run function works'''
+    def test_run_intdouble(self):
+        '''Test that the run function works for int and float'''
+        #set the xField combo
+        self.trendmapper.dlg.getXFieldCombo = lambda : 'dataInt'
+        #set the yField combo
+        self.trendmapper.dlg.getYFieldCombo = lambda : 'dataDouble'
+        self.trendmapper.run(test_run = True)
+    
+    def test_run_intst(self):
+        '''Test that the run function works for int and str num'''
+        #set the xField combo
+        self.trendmapper.dlg.getXFieldCombo = lambda : 'dataInt'
+        #set the yField combo
+        self.trendmapper.dlg.getYFieldCombo = lambda : 'datastr'
+        self.trendmapper.run(test_run = True)
+    
+    def test_run_strstr(self):
+        '''Test that the run function works for non numerical'''
+        #set the xField combo
+        self.trendmapper.dlg.getXFieldCombo = lambda : 'name'
+        #set the yField combo
+        self.trendmapper.dlg.getYFieldCombo = lambda : 'name'
         self.trendmapper.run(test_run = True)
   
 if __name__ == "__main__":
