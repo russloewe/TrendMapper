@@ -36,6 +36,8 @@ import os.path
 from trend_mapper_logger import myLogger
 log = myLogger(myLogger.INFO)
 
+import cProfile
+
 class TrendMapper:
     """QGIS Plugin Implementation."""
 
@@ -251,17 +253,21 @@ class TrendMapper:
             #grab a reference to the input layer
             layer = getLayerByName(inputLayerName)
             #check that the x and y fields are numbers
-            if getColType(layer, xField) in [7,10]:
-                log.error("Error: Field '{}' is a text column".format(xField))
-                return
-            elif getColType(layer, yField) in [7,10]:
-                log.error("Error: Field '{}' is a text column".format(yField))
-                return
+            #if getColType(layer, xField) in [7,10]:
+             #   log.error("Error: Field '{}' is a text column".format(xField))
+             #   return
+           # elif getColType(layer, yField) in [7,10]:
+             #   log.error("Error: Field '{}' is a text column".format(yField))
+             #   return
             
             dataSource = getData(layer, keyCol, [xField, yField])
             newLayer = createVectorLayer(layer, outputLayerName, [keyCol, 'LONGITUDE', 'LATITUDE'])
             result = analyze(calculateLinearRegression, dataSource)
-            f, r = result.next()
+            try:
+                f, r = result.next()
+            except StopIteration:
+                log.error('No results')
+                return
             addResultFields(newLayer, r)
             addFeatures(newLayer, result)
             newLayer.removeSelection()
