@@ -20,7 +20,11 @@ def addFeatures(dstLayer, featureSource):
     dstFields = dstLayer.pendingFields()
     newFeatures = []
     for featureIter, resultDict in featureSource:
-        feature = featureIter.next()
+        try:
+            feature = featureIter.next()
+        except StopIteration:
+            log.warning("No features in feature iterator")
+            continue
         newFeature = QgsFeature()
         newFeature.setFields(dstFields)
         newFeature.setGeometry(feature.geometry())
@@ -28,15 +32,12 @@ def addFeatures(dstLayer, featureSource):
             name = field.name()
             if name in resultDict:
                 newFeature[name] = resultDict[name]
-                print type(resultDict[name])
             else:
                 newFeature[name] = feature[name]
         newFeatures.append(newFeature)
-    if dstLayer.startEditing() == False:
-        log.error('Could not open {} for editing'.format(dstLayer.name()))
-        raise AttributeError('Could not open {} for editing'.format(dstLayer.name()))
+    checkTrue(dstLayer.startEditing())
     dstLayer.addFeatures(newFeatures)
-    dstLayer.commitChanges()
+    checkTrue(dstLayer.commitChanges())
         
 
 def addResultFields(layer, result):
@@ -190,7 +191,7 @@ def getData(srcLayer, keyCol, dataCols):
             data.append(point)
         if len(data) < 1:
             log.error('No data in dataset')
-            raise ValueError('No data in dataset')
+           # raise ValueError('No data in dataset')
         newFeatureIter =  srcLayer.getFeatures(QgsFeatureRequest().setFilterExpression(querry))
         yield (newFeatureIter, data) 
         
@@ -207,13 +208,17 @@ def analyze(function, dataIter):
     :returns: iterator object
     '''
     log.debug('call(funcName: {}, {})'.format(function.__name__, dataIter))
-    #print 'DataIter: ', dataIter
     for item in dataIter:
-       # print 'item: ', item
         featureIter, dataset = item
-        result = function(dataset)
-        yield (featureIter, result)
-    (featureIter, result)
+        #filter out data points like (1, '') or (1, )
+        dataset = filter(isNum, dataset)
+        #skip empty datasets
+        if len(dataset) < 1:
+            log.warning('No data returned from data iterator')
+            continue
+        else:
+            result = function(dataset)
+            yield (featureIter, result)
     
 def getLayerByName(name):
     '''Find the layer object in the map registry by the string name
@@ -231,7 +236,12 @@ def getLayerByName(name):
             break
     return layer
             
-            
+def isNum(x):
+    '''Return true if each element of x is float or integer'''
+    for i in x:
+        if (type(i) != int) and (type(i) != float):
+            return False
+    return True
             
 def checkTrue(fun):
     def catcher(*args, **kargs):
