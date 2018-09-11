@@ -33,3 +33,6 @@ class myLogger():
         
     def critical(self, message):
         QgsMessageLog.logMessage(message, 'TrendMapper', level=QgsMessageLog.CRITICAL)
+        
+    def warning(self, message):
+        QgsMessageLog.logMessage(message, 'TrendMapper', level=QgsMessageLog.WARNING)
