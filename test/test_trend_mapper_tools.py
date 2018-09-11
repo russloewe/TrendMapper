@@ -41,12 +41,12 @@ class ToolsTest(unittest.TestCase):
 
     def setUp(self):
         """Runs before each test."""
-        
         #define the test fields
         fields = [QgsField('LONGITUDE', QVariant.Double), 
                   QgsField('LATITUDE', QVariant.Double),
-                  QgsField('data1', QVariant.Double),
-                  QgsField('data2', QVariant.Int), 
+                  QgsField('dataDouble', QVariant.Double),
+                  QgsField('dataInt', QVariant.Int), 
+                  QgsField('dataStr', QVariant.String),
                   QgsField('name', QVariant.String)   ]
         #create a test layer
         vl = QgsVectorLayer("Point", 'test', "memory")
@@ -57,37 +57,56 @@ class ToolsTest(unittest.TestCase):
         #create a set of features
         transf = QgsCoordinateTransform(QgsCoordinateReferenceSystem(4326), QgsCoordinateReferenceSystem(32612))
         features = []
+        #create 50 test features for the test
         for i in range(50):
-            x = random.uniform(-180, 180)
-            y = random.uniform(-90, 90)
+            #create feature with fields from parent layer
             feature = QgsFeature()
             feature.setFields(vl.fields())
+            #create a random geometry point in lat/lon domain
+            x = random.uniform(-180, 180)
+            y = random.uniform(-90, 90)
             layerPoint = transf.transform(QgsPoint(x, y))
             feature.setGeometry(QgsGeometry.fromPoint(layerPoint))
+            #give feature one of four names
             if i%4 == 0:
-                name = 'one'
+                #first feature has all valid values with str ints
+                feature['name'] = 'one'
+                feature['dataDouble'] = random.uniform(-100, 100)
+                feature['dataInt'] = random.randint(0,100)
+                feature['dataStr'] = "{}".format(random.randint(0,100))
             elif i%4 == 1:
-                name = 'two'
-            elif i%4 == 3:
-                name = 'three'
+                #second feature has all valid values with str float
+                feature['name'] = 'two'
+                feature['dataDouble'] = random.uniform(-100, 100)
+                feature['dataInt'] = random.randint(0,100)
+                feature['dataStr'] = "{}".format(random.uniform(0,100))
+            elif i%4 == 2:
+                #third feature will have sporadic gaps
+                feature['name'] = 'three'
+                if random.randint(0, 3) == 0:
+                    feature['dataDouble'] = ''
+                else:
+                    feature['dataDouble'] = random.uniform(-100, 100)
+                if random.randint(0, 3) == 0:
+                    feature['dataInt'] = ''
+                else:
+                    feature['dataInt'] = random.randint(0,100)
+                if random.randint(0, 3):
+                    feature['dataStr'] = "{}".format(random.uniform(0,100))
+                else:
+                    feature['dataStr'] = "text"
             else:
-                name = 'four'
-            feature['name'] = name
-            if random.randint(0,100)%5 == 0:
-                feature['data1'] = None
-            elif random.randint(0,100)%5 == 0:
-                feature['data1'] = ''
-            else:
-                feature['data1'] = random.uniform(-100, 100)
-            feature['data2'] = random.randint(0,100)
-            features.append(feature)
+                #fourth will have no data for double and str colum
+                feature['name'] = 'four'
+                feature['dataDouble'] = ''
+                feature['dataInt'] = random.randint(0,100)
+                feature['dataStr'] = ''
+            features.append(feature)        
         #add the feature to the canvas
         checkTrue(vl.startEditing())
         vl.dataProvider().addFeatures(features)
         checkTrue(vl.commitChanges())
         QgsMapLayerRegistry.instance().addMapLayer(vl)
-        
-            
         self.layer = vl
         
         
@@ -100,25 +119,28 @@ class ToolsTest(unittest.TestCase):
         values = getUniqueKeys(self.layer, 'name')
         self.assertEqual(len(values), 4)
     
-    def test_getData(self):
-        '''Test getData()'''
-        data1 = [f for f in getData(self.layer, 'name', ['data1', 'data2'])]
+    def test_getData_intAndDouble(self):
+        '''Test getData() for int and double columns'''
+        data1 = [f for f in getData(self.layer, 'name', ['dataInt', 'dataDouble'])]
         self.assertEqual(len(data1), 4)
-        
-        data2 = [f for f in getData(self.layer, 'name', ['data1', 'data2'])]
+    
+    def test_getData_intAndStr(self):
+        '''Test getData() with int and str columns'''
+        data2 = [f for f in getData(self.layer, 'name', ['dataInt', 'dataStr'])]
         self.assertEqual(len(data2), 4)
-                
-        data3 = [f for f in getData(self.layer, 'name', ['data1', 'data2', 'data1'])]
+    
+    def test_getData_threecol(self):
+        '''Test getData() for more than two columns'''
+        data3 = [f for f in getData(self.layer, 'name', ['dataInt', 'dataDouble', 'dataStr'])]
         self.assertEqual(len(data3), 4)
 
     def test_analyze(self):
-        '''Test analiz'''
-        dataIter = getData(self.layer, 'name', ['data1', 'data2'])
+        '''Test analyze'''
+        dataIter = getData(self.layer, 'name', ['dataInt', 'dataDouble'])
         def fun(data):
             res1 = 0
             res2 = 0
             for x, y in data:
-               # print '(x, y) = ({}, {})'.format(x,y)
                 if x  == '' or y == '':
                     pass
                 else:
@@ -130,18 +152,18 @@ class ToolsTest(unittest.TestCase):
         for thing in a:
             ite, datadict = thing
             features = [i for i in ite]
-            self.assertTrue(len(features) > 10)
-            self.assertEqual(type(datadict['res1']), float)
-            self.assertEqual(type(datadict['res2']), float)
+            for k in datadict:
+                self.assertTrue(len(features) > 10)
+                self.assertEqual(type(datadict['res1']), float)
+                self.assertEqual(type(datadict['res2']), float)
 
     def test_addFeatures(self):
         '''Test addFeatures'''
-        dataIter = getData(self.layer, 'name', ['data1', 'data2'])
+        dataIter = getData(self.layer, 'name', ['dataInt', 'dataDouble'])
         def fun(data):
             res1 = 0
             res2 = 0
             for x, y in data:
-               # print '(x, y) = ({}, {})'.format(x,y)
                 if x  == '' or y == '':
                     pass
                 else:
@@ -150,7 +172,6 @@ class ToolsTest(unittest.TestCase):
             return {'res1' : res1, 'res2' : res2}
             
         a = analyze(fun, dataIter)
-        
         addFeatures(self.layer, a)
         
 if __name__ == "__main__":
