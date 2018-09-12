@@ -152,6 +152,53 @@ def getUniqueKeys(layer, keyCol):
     log.debug(':getUniqueKeys return: {}'.format(stations))
     return stations
 
+def featureGenerator(layer, keyName, keyCol):
+    '''Generate features from layer where keyCol equals keyName'''
+    log.debug('featureGenerator({}, {}, {})'.format(str(layer.name()), 
+                                                    keyName, keyCol))
+    querry = "{} = '{}'".format(keyCol, keyName)
+    featureIter = layer.getFeatures(QgsFeatureRequest().setFilterExpression(querry))
+    return featureIter
+    
+def datapointGenerator(featureGenerator, attList):
+    '''pull attributes in the attList from a feature and yield a dict'''
+    log.debug("datapointGenerator({}, {})".format(featureGenerator,
+                                                    attList))
+    for feature in featureGenerator:
+        result = {}
+        for key in attList:
+            result[key] = feature[key]
+        result['GEOMETRY' : feature.getGeometry()]
+        yield result
+
+def filterDatapointGenerator(datapointGen, filterFun):
+    '''only yield data points where filter fun is true'''
+    log.debug("filterDatapointGenerator({}, {})".format( datapointGen, 
+                                                  filterFun.__name__))
+    for data in datapointGen:
+        if filterFun(data):
+            yield data
+
+def convertedDatapointGenerator(datapointGen, convertFun, skipOnErr=True):
+    '''Take stream of data points and apply a function to each then yield'''
+    log.debug('mapDatapointGenerator({}, {})'.format(datapointGen, 
+                                                convertFun.__name__))
+    for data in datapointGen:
+        try:
+            dataOut = convertFun(data)
+        except Exception as e:
+            if skipOnErr:
+                log.warning("Exception in converting data point: {}"\
+                                .format(str(e)))
+                continue
+            else:
+                raise e
+        yield dataOut
+
+def organizeData(datapointGen):
+    '''organize data into x number of arrays'''
+    pass
+    
 def getData(srcLayer, keyCol, dataCols):
     ''' An iterator that returns the dataset for a 'station',aka unique
     key on each iteration along with an iterator that generates the
@@ -254,3 +301,14 @@ def merge_two_dicts(x, y):
     z = x.copy()  
     z.update(y)   
     return z
+
+def splitDict(dic, keys):
+    '''split a dictionary return both, with keys in first'''
+    dic1 = {}
+    dic2 = {}
+    for k in dic:
+        if k in keys:
+            dic1[key] = dic[key]
+        else:
+            dic2[key] = dic[key]
+    return dic1, dic2
