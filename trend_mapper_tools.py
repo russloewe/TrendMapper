@@ -168,7 +168,7 @@ def datapointGenerator(featureGenerator, attList):
         result = {}
         for key in attList:
             result[key] = feature[key]
-        result['GEOMETRY' : feature.getGeometry()]
+        result['GEOMETRY'] = feature.geometry()
         yield result
 
 def filterDatapointGenerator(datapointGen, filterFun):
@@ -195,9 +195,18 @@ def convertedDatapointGenerator(datapointGen, convertFun, skipOnErr=True):
                 raise e
         yield dataOut
 
-def organizeData(datapointGen):
-    '''organize data into x number of arrays'''
-    pass
+def organizeData(datapointGen, attr):
+    '''collect data and organize data into x number of arrays'''
+    log.debug("organizeData({}, {})".format(datapointGen, attr))
+    dataset = {}
+    #make a dict of empty lists 
+    for name in attr:
+        dataset[name] = []
+    for data in datapointGen:
+        if key in data:
+            dataset[key].append(data[key])
+        
+        
     
 def getData(srcLayer, keyCol, dataCols):
     ''' An iterator that returns the dataset for a 'station',aka unique
