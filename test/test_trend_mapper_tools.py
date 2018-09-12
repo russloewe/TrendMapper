@@ -74,11 +74,56 @@ class ToolsTest(unittest.TestCase):
         stationNames = ['USC00393316', 'USW00094040', 'USS0011J06S',
                                        'USC00126420', 'USW00024152']
         for station in stationNames:
-            features = [f for f in featureGenerator(self.layer_yearly, station, 
-                                                            'STATION')]
+            features = [f for f in featureGenerator(self.layer_yearly, 
+                                            station, 'STATION')]
             for f in features:
-            self.assertEqual(len(features), 8)
+                self.assertEqual(len(features), 8)
                 
+    def test_datapointGenerator(self):
+        '''Test the datapointGenerator'''
+        stationNames = ['USC00393316', 'USW00094040', 'USS0011J06S',
+                                       'USC00126420', 'USW00024152']
+        for station in stationNames:
+            featureIter = self.layer_yearly.getFeatures(
+                            QgsFeatureRequest().setFilterExpression(
+                                                 "{} = '{}'".format(
+                                            'STATION', station)))
+            datagen = datapointGenerator(featureIter, ['DATE', 'TAVG', 
+                                                   'STATION'])
+            data = [point for point in datagen]
+            self.assertEqual(len(data), 8)
+            for point in data:
+                self.assertTrue('DATE' in point)
+                self.assertTrue('TAVG' in point)
+                self.assertTrue('STATION' in point)
+                self.assertEqual(type(point['GEOMETRY']), QgsGeometry)
+                
+    def test_filterDatapointGenerator(self):
+        '''Test the filterDatapointGenerator function'''
+        def filterFun(point):
+            for key in point:
+                if point[key] == NULL:
+                    return False
+            return True
+        stationNames = ['USC00393316', 'USW00094040', 'USS0011J06S',
+                                       'USC00126420', 'USW00024152']
+        for station in stationNames:
+            featureIter = self.layer_yearly.getFeatures(
+                            QgsFeatureRequest().setFilterExpression(
+                                                 "{} = '{}'".format(
+                                            'STATION', station)))
+            datagen = datapointGenerator(featureIter, ['DATE', 'TAVG', 
+                                                   'STATION'])
+            filtered = filterDatapointGenerator(datagen, filterFun)
+            data = [f for f in filtered]
+            if station == 'USS0011J06S':
+                self.assertTrue(len(data) == 0)
+            else:
+                self.assertTrue(len(data) >= 3)
+            for point in data:
+                for key in point:
+                    self.assertTrue(point[key] != NULL)
+            
         
         
 if __name__ == "__main__":
