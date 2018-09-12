@@ -1,0 +1,32 @@
+Test data for trendmapper plugin. The data should be sufficient to 
+confirm the that trendmapper can do the following:
+**csv, spatialite, shapefile, geodatabase
+*datagen
+**1,2,3 or more data cols
+**filter bad values - Null, '' , non numerical values
+**map values - convert '03-03-1992' to days since x
+**organize into dicts
+** can produce numerical data {'x' : 1, 'y': 3} or text {'name' : 'eug', elev : 23}
+*analysis
+**Take a stream of datapoints, emit single result
+*** stat functions will collect all points and analyze dataset while
+    metadata function will iterate until all valid values are found
+
+
+test_noaa_yearly: DATE column is formatted as '1990'
+                  USC00393316 missing data for (DX70, TAVG, PRCP) for all but last 4 tables
+                  USW00094040 missing data for (TAVG, PRCP) for all but last 4 entries
+                  USS0011J06S missing all data for (TAVG, PRCP, DX70)
+                  USC00126420 sporadic data for all columns including data
+                  USW00024152 contians 'text' for (TAVG, PRCP, DX70) for all but last 4 entries
+                  
+test_noaa_monthly: DATE column is formatted '1990-02' 
+                  USC00276234 all valid data
+                  
+test_noaa_daily:  Date column is formatted '1990-03-13'
+                  USC00412354
+                  USR0000CLAB
+                  USW00012975
+                  US1KYAL0017
+                  USC00095811
+
