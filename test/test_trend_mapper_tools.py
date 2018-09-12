@@ -41,9 +41,15 @@ class ToolsTest(unittest.TestCase):
 
     def setUp(self):
         """Runs before each test."""
-        self.layer_yearly = QgsVectorLayer('./test/test_noaa_yearly.sqlite', 'test_noaa_yearly', 'ogr')
-        self.layer_monthly = QgsVectorLayer('./test/test_noaa_monthly.sqlite', 'test_noaa_monthly', 'ogr')
-        self.layer_daily = QgsVectorLayer('./test/test_noaa_daily.sqlite', 'test_noaa_daily', 'ogr')
+        self.layer_yearly = QgsVectorLayer(
+                                    './test/test_noaa_yearly.sqlite', 
+                                    'test_noaa_yearly', 'ogr')
+        self.layer_monthly = QgsVectorLayer(
+                                    './test/test_noaa_monthly.sqlite',
+                                     'test_noaa_monthly', 'ogr')
+        self.layer_daily = QgsVectorLayer(
+                                    './test/test_noaa_daily.sqlite', 
+                                    'test_noaa_daily', 'ogr')
         
         
 
@@ -124,8 +130,41 @@ class ToolsTest(unittest.TestCase):
                 for key in point:
                     self.assertTrue(point[key] != NULL)
             
-        
-        
+    def test_convertDatapointGenerator_tostr(self):
+        '''test the convertDatapointGenerator function'''
+        def filterFun(point):
+            for key in point:
+                if point[key] == NULL:
+                    return False
+            return True
+        def convFun(point):
+            for key in point:
+                if type(point[key]) != QgsGeometry:
+                    point[key] = str(point[key])
+            return point
+            
+        stationNames = ['USC00393316', 'USW00094040', 'USS0011J06S',
+                                       'USC00126420', 'USW00024152']
+        for station in stationNames:
+            featureIter = self.layer_yearly.getFeatures(
+                            QgsFeatureRequest().setFilterExpression(
+                                                 "{} = '{}'".format(
+                                            'STATION', station)))
+            datagen = datapointGenerator(featureIter, ['DATE', 'TAVG', 
+                                                   'STATION'])
+            filtered = filterDatapointGenerator(datagen, filterFun)
+            conv = convertedDatapointGenerator(filtered, convFun)
+            
+            data = [ p for p in conv]
+            if station == 'USS0011J06S':
+                self.assertTrue(len(data) == 0)
+            else:
+                self.assertTrue(len(data) >= 3)
+            for point in data:
+                for key in point:
+                    if key not in 'GEOMETRY':
+                        self.assertEqual(type(point[key]), str)
+                        
 if __name__ == "__main__":
     suite = unittest.makeSuite(ToolsTest)
     runner = unittest.TextTestRunner(verbosity=2)
