@@ -147,6 +147,9 @@ def getUniqueKeys(layer, keyCol):
     if int(layer.featureCount()) < 1:
         raise AttributeError('No features in layer: {}'.format(layer.name()))
     idx = layer.fieldNameIndex(keyCol)
+    if idx < 0:
+        raise ValueError('Could not get field index for "{}" on {}'\
+                            .format(keyCol, layer.name()))
     stations = layer.uniqueValues(idx)
     stations = map(str, stations) #convert all the entries to strings
     log.debug(':getUniqueKeys return: {}'.format(stations))
