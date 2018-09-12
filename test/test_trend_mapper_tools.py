@@ -34,7 +34,26 @@ import faulthandler
 faulthandler.enable()
 
 #sys.settrace(trace)
+def filterFun(point):
+    for key in point:
+        if point[key] == NULL:
+            return False
+    return True
+def convFun(point):
+    for key in point:
+        if type(point[key]) != QgsGeometry:
+            point[key] = str(point[key])
+    return point
 
+def convFunNum(attr):
+    def fun(point):
+        for key in point:
+            if key in attr:
+                point[key] = float(point[key])
+            elif type(point[key]) != QgsGeometry:
+                point[key] = str(point[key])
+        return point
+    return fun
 
 class ToolsTest(unittest.TestCase):
     """Test dialog works."""
@@ -106,11 +125,6 @@ class ToolsTest(unittest.TestCase):
                 
     def test_filterDatapointGenerator(self):
         '''Test the filterDatapointGenerator function'''
-        def filterFun(point):
-            for key in point:
-                if point[key] == NULL:
-                    return False
-            return True
         stationNames = ['USC00393316', 'USW00094040', 'USS0011J06S',
                                        'USC00126420', 'USW00024152']
         for station in stationNames:
@@ -132,16 +146,7 @@ class ToolsTest(unittest.TestCase):
             
     def test_convertDatapointGenerator_tostr(self):
         '''test the convertDatapointGenerator function'''
-        def filterFun(point):
-            for key in point:
-                if point[key] == NULL:
-                    return False
-            return True
-        def convFun(point):
-            for key in point:
-                if type(point[key]) != QgsGeometry:
-                    point[key] = str(point[key])
-            return point
+        
             
         stationNames = ['USC00393316', 'USW00094040', 'USS0011J06S',
                                        'USC00126420', 'USW00024152']
@@ -164,7 +169,36 @@ class ToolsTest(unittest.TestCase):
                 for key in point:
                     if key not in 'GEOMETRY':
                         self.assertEqual(type(point[key]), str)
+    
+    def test_convertDatapointGenerator_tofloat(self):
+        '''test the convertDatapointGenerator function'''
+        
+            
+        stationNames = ['USC00393316', 'USW00094040', 'USS0011J06S',
+                                       'USC00126420', 'USW00024152']
+        for station in stationNames:
+            featureIter = self.layer_yearly.getFeatures(
+                            QgsFeatureRequest().setFilterExpression(
+                                                 "{} = '{}'".format(
+                                            'STATION', station)))
+            datagen = datapointGenerator(featureIter, ['DATE', 'TAVG', 
+                                                   'STATION'])
+            filtered = filterDatapointGenerator(datagen, filterFun)
+            conv = convertedDatapointGenerator(filtered, convFunNum(['DATE', 'TAVG']), skipOnErr = True)
+            
+            data = [ p for p in conv]
+            if station == 'USS0011J06S':
+                self.assertTrue(len(data) == 0)
+            else:
+                self.assertTrue(len(data) >= 3)
+            for point in data:
+                for key in point:
+                    if key in ['DATE', 'TAVG']:
+                        self.assertEqual(type(point[key]), float)
                         
+    def test_organizeData(self):
+        '''Test the organizeData function'''
+        
 if __name__ == "__main__":
     suite = unittest.makeSuite(ToolsTest)
     runner = unittest.TextTestRunner(verbosity=2)
