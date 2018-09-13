@@ -211,7 +211,7 @@ class ToolsTest(unittest.TestCase):
             conv = convertedDatapointGenerator(filtered, convFunNum(['DATE', 'TAVG']), skipOnErr = True)
             
             data = organizeData(conv, ['DATE', 'TAVG'])
-            print data
+
             
 if __name__ == "__main__":
     suite = unittest.makeSuite(ToolsTest)
