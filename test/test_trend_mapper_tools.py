@@ -198,7 +198,21 @@ class ToolsTest(unittest.TestCase):
                         
     def test_organizeData(self):
         '''Test the organizeData function'''
-        
+        stationNames = ['USC00393316', 'USW00094040', 'USS0011J06S',
+                                       'USC00126420', 'USW00024152']
+        for station in stationNames:
+            featureIter = self.layer_yearly.getFeatures(
+                            QgsFeatureRequest().setFilterExpression(
+                                                 "{} = '{}'".format(
+                                            'STATION', station)))
+            datagen = datapointGenerator(featureIter, ['DATE', 'TAVG', 
+                                                   'STATION'])
+            filtered = filterDatapointGenerator(datagen, filterFun)
+            conv = convertedDatapointGenerator(filtered, convFunNum(['DATE', 'TAVG']), skipOnErr = True)
+            
+            data = organizeData(conv, ['DATE', 'TAVG'])
+            print data
+            
 if __name__ == "__main__":
     suite = unittest.makeSuite(ToolsTest)
     runner = unittest.TextTestRunner(verbosity=2)

@@ -203,12 +203,13 @@ def organizeData(datapointGen, attr):
     log.debug("organizeData({}, {})".format(datapointGen, attr))
     dataset = {}
     #make a dict of empty lists 
-    datapoint = datapointGen.next()
-    for key in datapoint:
-        dataset[key] = [datapoint[key]]
+    for key in attr:
+        dataset[key] = []
     for data in datapointGen:
-        if key in data:
-            dataset[key].append(data[key])
+        for key in data:
+            if key in attr:
+                dataset[key].append(data[key])
+    return dataset
         
         
     
