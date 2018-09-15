@@ -212,7 +212,48 @@ class ToolsTest(unittest.TestCase):
             
             data = organizeData(conv, ['DATE', 'TAVG'])
 
-            
+    def test_mergeDict(self):
+        '''Test the merge dict function'''
+        dica = { 'a' : 1, 'b' : ['a', 'b'], 'e' : 2}
+        dicb = { 'c': 'one', 'd' : 2}
+        dicc = {'a' : 3, 'b' : 3, 'd' : 2}
+        
+        result = mergeDicts(dica, dicb, excluded = ['e', 'd'])
+        self.assertEqual(result['a'], 1)
+        self.assertEqual(result['b'], ['a', 'b'])
+        self.assertEqual(result['c'], 'one')
+        self.assertTrue('e' not in result)
+        self.assertTrue('d' not in result)
+        try:
+            result2 = mergeDicts(dica, dicc)
+        except KeyError:
+            pass
+        else:
+            self.fail('There should have been a keyerror for dict'\
+                      ' key value confliction')
+    
+    def test_createVectorLayer(self):
+        '''Test createVectorLayer function'''
+        attr = ['station', 'date', 'longitude']
+        newLayer = createVectorLayer(self.layer_yearly, 'new', attr)
+        newFields = []
+        for i in newLayer.pendingFields():
+            newFields.append(str(i.name()))
+        for name in attr:
+            if name not in newFields:
+                self.fail('{} not in new layer fields'.format(name))
+    
+    def test_createVectorLayer_wrongCol(self):
+        '''Test createVectorLayer with wrong column name'''
+        attr = ['---station', '---date', '---longitude']
+        try:
+            newLayer = createVectorLayer(self.layer_yearly, 'new', attr)
+        except AttributeError:
+            pass
+        else:
+            self.fail('AttributeError should have been raised for wrong'\
+                      ' column name')
+                
 if __name__ == "__main__":
     suite = unittest.makeSuite(ToolsTest)
     runner = unittest.TextTestRunner(verbosity=2)
