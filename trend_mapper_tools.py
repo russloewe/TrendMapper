@@ -1,6 +1,6 @@
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QPyNullVariant
-from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI, QgsFeatureRequest, QgsField, QgsVectorLayer, QgsFeature
-from qgis.PyQt.QtCore import QVariant
+from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI, QgsFeatureRequest, QgsField, QgsVectorLayer, QgsFeature, QgsGeometry
+from qgis.PyQt.QtCore import QVariant, QPyNullVariant
 # Initialize Qt resources from file resources.py
 import os.path
 from trend_mapper_logger import myLogger
@@ -8,36 +8,29 @@ log = myLogger(myLogger.INFO)
 
 
 
-def addFeatures(dstLayer, featureSource):
+def makeFeature(dstLayer, feature):
     '''Copy features form a source vector layer to a target layer. 
     Only copy features whos value of the keyCol attribute is in the 
     featureList array. When copying the features, only copy the 
     attributes whos name is in the attribute array.
     
+    :param feature is actually a dict
+    
     '''
-    log.debug('call("{}", "{}")'\
-                    .format(dstLayer, featureSource))
+    log.debug('makeFeature("{}", "{}")'\
+                    .format(dstLayer, feature))
     dstFields = dstLayer.pendingFields()
-    newFeatures = []
-    for featureIter, resultDict in featureSource:
-        try:
-            feature = featureIter.next()
-        except StopIteration:
-            log.warning("No features in feature iterator")
-            continue
-        newFeature = QgsFeature()
-        newFeature.setFields(dstFields)
-        newFeature.setGeometry(feature.geometry())
-        for field in newFeature.fields():
-            name = field.name()
-            if name in resultDict:
-                newFeature[name] = resultDict[name]
-            else:
-                newFeature[name] = feature[name]
-        newFeatures.append(newFeature)
-    checkTrue(dstLayer.startEditing())
-    dstLayer.addFeatures(newFeatures)
-    checkTrue(dstLayer.commitChanges())
+    newFeature = QgsFeature()
+    newFeature.setFields(dstFields)
+    newFeature.setGeometry(feature['GEOMETRY'])
+    for field in newFeature.fields():
+        name = str(field.name())
+        attrVal = feature[name]
+        newFeature[name] = attrVal
+    #checkTrue(dstLayer.startEditing())
+   # dstLayer.addFeatures(newFeature)
+    #checkTrue(dstLayer.commitChanges())
+    return newFeature
         
 
 def addResultFields(layer, result):
@@ -95,17 +88,16 @@ def createVectorLayer(srcLayer, name, attributes, addToCanvas=False):
     for i in fields:
         if str(i.name()) in attributes:
             newFields.append(i)
+    for name in attributes:
+        if name not in [str(i.name()) for i in newFields]:
+            raise AttributeError('Field {} not in new layer'.format(name))
     #create a new point layer
     vl = QgsVectorLayer("Point", name, "memory")
     pr = vl.dataProvider()
     #add the subset of fields to the new layer
-    if vl.startEditing() == False:
-        raise AttributeError("Unable to start editing layer: {}"\
-                                                 .format(vl.name()))
-    pr.addAttributes( newFields )
-    if vl.commitChanges() == False:
-        raise AttributeError("Unable to commit changes to layer: {}"\
-                                                 .format(vl.name()))
+    checkTrue(vl.startEditing())
+    checkTrue(pr.addAttributes(newFields))
+    checkTrue(vl.commitChanges())
     return vl
     
     
@@ -162,16 +154,18 @@ def featureGenerator(layer, keyName, keyCol):
     querry = "{} = '{}'".format(keyCol, keyName)
     featureIter = layer.getFeatures(QgsFeatureRequest().setFilterExpression(querry))
     return featureIter
-    
+        
+
 def datapointGenerator(featureGenerator, attList):
     '''pull attributes in the attList from a feature and yield a dict'''
     log.debug("datapointGenerator({}, {})".format(featureGenerator,
                                                     attList))
     for feature in featureGenerator:
+        #print feature
         result = {}
         for key in attList:
             result[key] = feature[key]
-        result['GEOMETRY'] = feature.geometry()
+        result['GEOMETRY'] = feature.geometryAndOwnership() #using just .geometry() causes segfault down the line
         yield result
 
 def filterDatapointGenerator(datapointGen, filterFun):
@@ -179,6 +173,7 @@ def filterDatapointGenerator(datapointGen, filterFun):
     log.debug("filterDatapointGenerator({}, {})".format( datapointGen, 
                                                   filterFun.__name__))
     for data in datapointGen:
+        #print data
         if filterFun(data):
             yield data
 
@@ -187,6 +182,7 @@ def convertedDatapointGenerator(datapointGen, convertFun, skipOnErr=True):
     log.debug('mapDatapointGenerator({}, {})'.format(datapointGen, 
                                                 convertFun.__name__))
     for data in datapointGen:
+       #print data
         try:
             dataOut = convertFun(data)
         except Exception as e:
@@ -198,89 +194,27 @@ def convertedDatapointGenerator(datapointGen, convertFun, skipOnErr=True):
                 raise e
         yield dataOut
 
-def organizeData(datapointGen, attr):
+def organizeData(datapointGen, dataAttr):
     '''collect data and organize data into x number of arrays'''
-    log.debug("organizeData({}, {})".format(datapointGen, attr))
+    log.debug("organizeData({}, {})".format(datapointGen, dataAttr))
     dataset = {}
-    #make a dict of empty lists 
-    for key in attr:
+    #make a dict of empty lists for each dataAttr
+    for key in dataAttr:
         dataset[key] = []
     for data in datapointGen:
+        log.info("org {}".format(data))
         for key in data:
-            if key in attr:
+            #collect all the dataAttr in a list
+            if key in dataAttr:
                 dataset[key].append(data[key])
+            #copy the geometry blob and everything else once
+            elif key not in dataset:
+                if (key == 'GEOMETRY') and (type(data[key]) != QgsGeometry):
+                    pass
+                else:
+                    dataset[key] = data[key]
     return dataset
         
-        
-    
-def getData(srcLayer, keyCol, dataCols):
-    ''' An iterator that returns the dataset for a 'station',aka unique
-    key on each iteration along with an iterator that generates the
-    features corresponding to the data set
-    
-    :param srcLayer: Layer to querry data from.
-    :type srcLayer: QgsVectorLayer
-    
-    :param keyCol: Name of attribute field that data is grouped by
-    :type keyCol: str
-    
-    :param dataCols: Array of the names of attribute fields to pull 
-        values from. Aribtrary length.
-    :type dataCols: [str, str, ...]
-    
-    :returns: A tuple contianing two elements. First element it a new 
-        instance of the iterator used to querry features data was pulled,
-        second is an array of tuples. Each tuple contains a value for
-        each of the data fields provided in :param dataCols: in the 
-        same order.
-    :rtype: (QgsFeatureIter, [(float, float, ...), ...])'''
-    log.debug('call("{}", "{}", {}'.format(srcLayer, keyCol, dataCols))
-    for keyName in getUniqueKeys(srcLayer, keyCol):
-        log.debug('keyName: {}'.format(keyName))
-        data = []
-        querry = "{} = '{}'".format(keyCol, keyName)
-        featureIter = srcLayer.getFeatures(QgsFeatureRequest().setFilterExpression(querry))
-        for feature in featureIter:
-            point = []
-            for col in dataCols:
-                try:
-                    val = float(feature[col])
-                except (ValueError, TypeError):
-                    val = ''
-                point.append(val)
-            point = tuple(point)
-            data.append(point)
-        if len(data) < 1:
-            log.error('No data in dataset')
-           # raise ValueError('No data in dataset')
-        newFeatureIter =  srcLayer.getFeatures(QgsFeatureRequest().setFilterExpression(querry))
-        yield (newFeatureIter, data) 
-        
-def analyze(function, dataIter):
-    '''Create an iterator that gives analyzed data and feateru iterator
-    
-    :param function: The function to apply to the dataset
-    :type function: function
-    
-    :param dataIter: An iterator that returns a list of data points 
-        and the function iterator
-    :type dataIter: generator object
-    
-    :returns: iterator object
-    '''
-    log.debug('call(funcName: {}, {})'.format(function.__name__, dataIter))
-    for item in dataIter:
-        featureIter, dataset = item
-        #filter out data points like (1, '') or (1, )
-        dataset = filter(isNum, dataset)
-        #skip empty datasets
-        if len(dataset) < 1:
-            log.warning('No data returned from data iterator')
-            continue
-        else:
-            result = function(dataset)
-            yield (featureIter, result)
-    
 def getLayerByName(name):
     '''Find the layer object in the map registry by the string name
     
@@ -293,9 +227,8 @@ def getLayerByName(name):
     layer=None
     for lyr in QgsMapLayerRegistry.instance().mapLayers().values():
         if lyr.name() == name:
-            layer = lyr
-            break
-    return layer
+            return lyr
+    raise AttributeError('Could not find layer: "{}"'.format(name))
             
 def isNum(x):
     '''Return true if each element of x is float or integer'''
@@ -311,9 +244,17 @@ def checkTrue(fun):
             raise ValueError('{} returned {}'.format(fun.__name__, result))
     return catcher
 
-def merge_two_dicts(x, y):
-    z = x.copy()  
-    z.update(y)   
+def mergeDicts(x, y, excluded=[]):
+    for key in x:
+        if key in y:
+            raise KeyError('Conflicting dict keys')
+    z = {}
+    for key in x:
+        if key not in excluded:
+            z[key] = x[key]
+    for key in y:
+        if key not in excluded:
+            z[key] = y[key]
     return z
 
 def splitDict(dic, keys):
@@ -326,3 +267,19 @@ def splitDict(dic, keys):
         else:
             dic2[key] = dic[key]
     return dic1, dic2
+
+def filterFun(point):
+    for key in point:
+        if type(point[key]) == QPyNullVariant:
+            return False
+    return True
+
+def convFunNum(attr):
+    def fun(point):
+        for key in point:
+            if key in attr:
+                point[key] = float(point[key])
+            elif type(point[key]) != QgsGeometry:
+                point[key] = str(point[key])
+        return point
+    return fun
