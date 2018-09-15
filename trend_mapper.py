@@ -196,7 +196,9 @@ class TrendMapper:
     def updateAttributeCombos(self):
         '''this is the callback function that gets called by the 
         dialoge class when it needs the attribute data for a layer 
-        when the combo index is changed'''
+        when the combo index is changed. This function is here and 
+        not in the dialog class so that the dialog class doesn't 
+        depend on the qgis interface.'''
         
         #grab the selected layer from the dialog class
         layerName = self.dlg.getInputLayer()
@@ -252,23 +254,30 @@ class TrendMapper:
             
             #grab a reference to the input layer
             layer = getLayerByName(inputLayerName)
-            #check that the x and y fields are numbers
-            #if getColType(layer, xField) in [7,10]:
-             #   log.error("Error: Field '{}' is a text column".format(xField))
-             #   return
-           # elif getColType(layer, yField) in [7,10]:
-             #   log.error("Error: Field '{}' is a text column".format(yField))
-             #   return
+
+            #get the list of stations to process
+            dataAttr = [xField, yField]
+            copyAttr = [keyCol]
+            stations = getUniqueKeys(layer, keyCol)
             
-            dataSource = getData(layer, keyCol, [xField, yField])
-            newLayer = createVectorLayer(layer, outputLayerName, [keyCol, 'LONGITUDE', 'LATITUDE'])
-            result = analyze(calculateLinearRegression, dataSource)
-            try:
-                f, r = result.next()
-            except StopIteration:
-                log.error('No results')
-                return
-            addResultFields(newLayer, r)
-            addFeatures(newLayer, result)
-            newLayer.removeSelection()
+
+            def getdata(station):
+                featureItr = featureGenerator(layer, station, keyCol)
+                pointItr = datapointGenerator(featureItr, copyAttr + dataAttr)
+                filterItr = filterDatapointGenerator(pointItr, filterFun)
+                convItr = convertedDatapointGenerator(filterItr, 
+                                           convFunNum(dataAttr),
+                                           skipOnErr = False)
+                return organizeData(convItr, dataAttr)
+            
+            data = getdata(stations[0])
+            result = calculateLinearRegression(data[xField], data[yField])
+            newLayer = createVectorLayer(layer, "new", copyAttr)
+            addResultFields(newLayer, result)
+            mergeResult = mergeDicts(data,result, excluded = dataAttr)
+            newFeature = makeFeature(newLayer, mergeResult)
+            checkTrue(newLayer.startEditing())
+            newLayer.addFeatures([newFeature], makeSelected = False)
+            checkTrue(newLayer.commitChanges())
+           # newLayer.removeSelection()
             QgsMapLayerRegistry.instance().addMapLayer(newLayer)
