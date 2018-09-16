@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>605</width>
-    <height>421</height>
+    <width>615</width>
+    <height>448</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
      <x>0</x>
      <y>0</y>
      <width>611</width>
-     <height>431</height>
+     <height>441</height>
     </rect>
    </property>
    <property name="currentIndex">
@@ -29,137 +29,6 @@
     <attribute name="title">
      <string>Tab 1</string>
     </attribute>
-    <widget class="QComboBox" name="inputLayerCombo">
-     <property name="geometry">
-      <rect>
-       <x>140</x>
-       <y>20</y>
-       <width>281</width>
-       <height>22</height>
-      </rect>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_4">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>20</y>
-       <width>91</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Input Layer</string>
-     </property>
-    </widget>
-    <widget class="QComboBox" name="categoryCombo">
-     <property name="geometry">
-      <rect>
-       <x>100</x>
-       <y>90</y>
-       <width>121</width>
-       <height>22</height>
-      </rect>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>90</y>
-       <width>57</width>
-       <height>15</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Category:</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_2">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>140</y>
-       <width>131</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>x variable:</string>
-     </property>
-    </widget>
-    <widget class="QComboBox" name="xFieldCombo">
-     <property name="geometry">
-      <rect>
-       <x>100</x>
-       <y>140</y>
-       <width>121</width>
-       <height>22</height>
-      </rect>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_3">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>180</y>
-       <width>121</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>y variable:</string>
-     </property>
-    </widget>
-    <widget class="QComboBox" name="yFieldCombo">
-     <property name="geometry">
-      <rect>
-       <x>120</x>
-       <y>180</y>
-       <width>121</width>
-       <height>22</height>
-      </rect>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_5">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>230</y>
-       <width>101</width>
-       <height>16</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Output Layer:</string>
-     </property>
-    </widget>
-    <widget class="QLineEdit" name="outputLayerLine">
-     <property name="geometry">
-      <rect>
-       <x>120</x>
-       <y>230</y>
-       <width>141</width>
-       <height>21</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>CalculatedLayer</string>
-     </property>
-    </widget>
-    <widget class="QCheckBox" name="exportRisidualsCheck">
-     <property name="geometry">
-      <rect>
-       <x>30</x>
-       <y>270</y>
-       <width>121</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Export Stats</string>
-     </property>
-    </widget>
     <widget class="QDialogButtonBox" name="button_box">
      <property name="geometry">
       <rect>
@@ -176,37 +45,149 @@
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
     </widget>
-    <widget class="QListWidget" name="copyAttr">
+    <widget class="QWidget" name="formLayoutWidget">
      <property name="geometry">
       <rect>
-       <x>350</x>
-       <y>90</y>
-       <width>191</width>
-       <height>192</height>
+       <x>0</x>
+       <y>20</y>
+       <width>301</width>
+       <height>161</height>
       </rect>
      </property>
-     <property name="selectionMode">
-      <enum>QAbstractItemView::MultiSelection</enum>
-     </property>
+     <layout class="QFormLayout" name="formLayout">
+      <property name="fieldGrowthPolicy">
+       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+      </property>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Input Layer</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Category:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>x variable:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>y variable:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>Output Layer:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="inputLayerCombo"/>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="categoryCombo"/>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="xFieldCombo"/>
+      </item>
+      <item row="3" column="1">
+       <widget class="QComboBox" name="yFieldCombo"/>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLineEdit" name="outputLayerLine">
+        <property name="text">
+         <string>CalculatedLayer</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QCheckBox" name="exportRisidualsCheck">
+        <property name="text">
+         <string>Export Stats</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
-    <widget class="QLabel" name="label_6">
+    <widget class="QWidget" name="verticalLayoutWidget">
      <property name="geometry">
       <rect>
        <x>350</x>
-       <y>50</y>
-       <width>191</width>
-       <height>31</height>
+       <y>20</y>
+       <width>201</width>
+       <height>171</height>
       </rect>
      </property>
-     <property name="text">
-      <string>Additional Attributes to Copy:</string>
-     </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QLabel" name="label_6">
+        <property name="text">
+         <string>Additional Attributes to Copy:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QListWidget" name="copyAttr">
+        <property name="selectionMode">
+         <enum>QAbstractItemView::MultiSelection</enum>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </widget>
    <widget class="QWidget" name="tab_2">
     <attribute name="title">
      <string>Tab 2</string>
     </attribute>
+    <widget class="QCheckBox" name="xDateCheck">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>90</y>
+       <width>151</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>format date column</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="dateFormatLineEdit">
+     <property name="geometry">
+      <rect>
+       <x>400</x>
+       <y>90</y>
+       <width>121</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>%Y-%m-%d</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="dateFormatCombo">
+     <property name="geometry">
+      <rect>
+       <x>200</x>
+       <y>90</y>
+       <width>161</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
    </widget>
   </widget>
  </widget>
