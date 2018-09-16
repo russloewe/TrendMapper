@@ -97,6 +97,11 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         outputlayer line edit.
         returns string'''
         return(self.outputLayerLine.text())
+    
+    def getCopyAttrSelected(self):
+        '''Get a list of the attributes selected in the copy
+        attr QListWidget'''
+        return [item.text() for item in self.copyAttr.selectedItems()]
         
     def setLayerInputCombo(self, layerList):
         '''Get a list of available layers from 
@@ -113,12 +118,12 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         self.categoryCombo.clear()
         self.xFieldCombo.clear()
         self.yFieldCombo.clear()
+        self.copyAttr.clear()
         for item in inputList:
             self.categoryCombo.addItem(item)
             self.xFieldCombo.addItem(item)
             self.yFieldCombo.addItem(item)
-            
-
+            self.copyAttr.addItem(item)
          
     def setAttributeComboCallback(self, callback_function):
         '''recieves a function to connect with the
