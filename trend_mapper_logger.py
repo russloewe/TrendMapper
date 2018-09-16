@@ -1,6 +1,4 @@
 from qgis.core import QgsMessageLog
-from inspect import currentframe, getframeinfo, stack
-
 
 class myLogger():
     DEBUG = 0 
@@ -15,24 +13,26 @@ class myLogger():
         self.level = level
     
     def info(self, message):
-        QgsMessageLog.logMessage(message, 'TrendMapper', level=QgsMessageLog.INFO)
+        if self.level <= 1:
+            QgsMessageLog.logMessage(message, 'TrendMapper', 
+                                            level=QgsMessageLog.INFO)
     
     def debug(self, message):
-        frameinfo = getframeinfo(currentframe())
-        fname = frameinfo.filename.split('/')[-1]
-        lineno = frameinfo.lineno
-        funame = stack()[0][3]
-        QgsMessageLog.logMessage("{}:{}({}): ".format(fname, funame,
-                                    lineno), 'TrendMapper',
-                                    level=QgsMessageLog.INFO)
-        QgsMessageLog.logMessage(message, 'TrendMapper',
-                                             level=QgsMessageLog.INFO)
+        if self.level == 0:
+            QgsMessageLog.logMessage(message, 'TrendMapper',
+                                            level=QgsMessageLog.INFO)
     
     def error(self, message):
-        QgsMessageLog.logMessage(message, 'TrendMapper', level=QgsMessageLog.CRITICAL)
+        if self.level <= 2:
+            QgsMessageLog.logMessage(message, 'TrendMapper',
+                                        level=QgsMessageLog.CRITICAL)
         
     def critical(self, message):
-        QgsMessageLog.logMessage(message, 'TrendMapper', level=QgsMessageLog.CRITICAL)
+        if self.level <= 3:
+            QgsMessageLog.logMessage(message, 'TrendMapper', 
+                                        level=QgsMessageLog.CRITICAL)
         
     def warning(self, message):
-        QgsMessageLog.logMessage(message, 'TrendMapper', level=QgsMessageLog.WARNING)
+        if self.level <= 2:
+            QgsMessageLog.logMessage(message, 'TrendMapper', 
+                                         level=QgsMessageLog.WARNING)
