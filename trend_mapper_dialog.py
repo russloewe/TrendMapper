@@ -65,32 +65,14 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         returns string'''
         return(str(self.yFieldCombo.currentText()))
         
-    def getDiscardBadFitOption(self):
-        '''get checkbox status from Discard Bad Fit box.
-        returns boolean'''
-        return(self.discardBadFitCheck.isChecked())
+    def getXDateFormatCheckbok(self):
+        '''get status from the date format checkbox'''
+        return(self.xDateCheck.isChecked())
         
     def getExportRisidualsOption(self):
         '''returns Export Riduals choice.
             returns boolean'''
         return(self.exportRisidualsCheck.isChecked())
-        
-    def getFilterOutliersOption(self):
-        '''Get choice for filtering outliers check box.
-        returns boolean'''
-        return(self.filterOutliersCheck.isChecked())
-        
-    def getThresholdValue(self):
-        '''Gets the value for threshold input in regression
-        analysis filter option. The number is the multiple of 
-        standard deviations for outlier filter.
-        returns float or int'''
-        value = self.outlierThresholdLine.text()
-        try:
-            num_value = float(value)
-        except ValueError:
-            num_value = None
-        return num_value
         
     def getOutputLayerName(self):
         '''gets the name for the output layer from the 

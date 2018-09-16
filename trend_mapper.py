@@ -244,6 +244,8 @@ class TrendMapper:
             yField = self.dlg.getYFieldCombo()
             outputLayerName = self.dlg.getOutputLayerName()
             copyAttr = self.dlg.getCopyAttrSelected()
+            statsCheck = self.dlg.getExportRisidualsOption()
+            formatXCol = self.dlg.getXDateFormatCheckbok()
             #need to add copy attributes
             log.debug('''Trendmapper runner params:
                         inputLayerName: {}
@@ -273,7 +275,8 @@ class TrendMapper:
                     return data, None
                 else:
                     result = calculateLinearRegression(data[xField], 
-                                                data[yField])
+                                                data[yField],
+                                            includeStats = statsCheck)
                     return data, result
             #create the result layer
             newLayer = createVectorLayer(layer, outputLayerName, copyAttr)
