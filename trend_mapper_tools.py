@@ -46,17 +46,13 @@ def addResultFields(layer, result):
     '''
     log.debug('call({},{})'.format(layer, result))
     checkTrue( layer.startEditing() )
-    #print 'Result: {}'.format(result)
     for i in result:
-        if type(i) != str:
-            log.error('Fieldname paramater: "{}" is not a str'.format(i))
-            raise TypeError('Fieldname paramater: "{}" is not a str'.format(i))
         checkTrue(layer.dataProvider().addAttributes([QgsField(i, 
                                          QVariant.Double)]))
     checkTrue(layer.updateFields())
     checkTrue(layer.commitChanges())
     
-def createVectorLayer(srcLayer, name, attributes, addToCanvas=False):
+def createVectorLayer(srcLayer, newLayerName, fieldsToCopy):
     '''Create a new vector layer with geometry and selected fields 
     from a source vector layer
     
@@ -71,28 +67,25 @@ def createVectorLayer(srcLayer, name, attributes, addToCanvas=False):
         be copying the corresponding fields
     :type attributes: [str]
     
-    :param addToCanvas: Optional flag to add the new layer to the 
-        qgis canvas map registry
-    :type addToCanvas: bool
-    
     :returns: The newly created vector layer
     :rtype: QgVectorLayer
     '''
-    if name == '':
-        name = "{}_new".format(str(srcLayer.name())) 
-    log.debug('call("{}", "{}", "{}", addToCanvas={})'\
-                    .format(srcLayer, name, attributes, addToCanvas))
-    fields = srcLayer.pendingFields()
+    if newLayerName == '':
+        newLayerName = "{}_new".format(str(srcLayer.name())) 
+    log.debug('call("{}", "{}", "{}")'.format(srcLayer, newLayerName,
+                                                        fieldsToCopy))
+    srcFields = srcLayer.pendingFields()
     newFields = []
     #make a subset of the source layer fields
-    for i in fields:
-        if str(i.name()) in attributes:
+    for i in srcFields:
+        if str(i.name()) in fieldsToCopy:
             newFields.append(i)
-    for name in attributes:
+    #make sure 
+    for name in fieldsToCopy:
         if name not in [str(i.name()) for i in newFields]:
             raise AttributeError('Field {} not in new layer'.format(name))
     #create a new point layer
-    vl = QgsVectorLayer("Point", name, "memory")
+    vl = QgsVectorLayer("Point", newLayerName, "memory")
     pr = vl.dataProvider()
     #add the subset of fields to the new layer
     checkTrue(vl.startEditing())
