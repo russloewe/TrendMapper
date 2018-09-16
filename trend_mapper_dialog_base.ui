@@ -182,6 +182,9 @@
      <height>21</height>
     </rect>
    </property>
+   <property name="text">
+    <string>CalculatedLayer</string>
+   </property>
   </widget>
   <widget class="QLabel" name="label_5">
    <property name="geometry">
