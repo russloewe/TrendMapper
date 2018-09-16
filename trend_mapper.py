@@ -243,6 +243,7 @@ class TrendMapper:
             xField = self.dlg.getXFieldCombo()
             yField = self.dlg.getYFieldCombo()
             outputLayerName = self.dlg.getOutputLayerName()
+            #need to add copy attributes
             log.debug('''Trendmapper runner params:
                         inputLayerName: {}
                         keyCol: {}
@@ -254,30 +255,41 @@ class TrendMapper:
             
             #grab a reference to the input layer
             layer = getLayerByName(inputLayerName)
-
-            #get the list of stations to process
             dataAttr = [xField, yField]
-            copyAttr = [keyCol]
-            stations = getUniqueKeys(layer, keyCol)
+            copyAttr = [keyCol] #need to add way to get more from user
+            stations = getUniqueKeys(layer, keyCol) #get the list of stations to process
             
-
+            #create a function create a result feature for each station set
             def getdata(station):
                 featureItr = featureGenerator(layer, station, keyCol)
                 pointItr = datapointGenerator(featureItr, copyAttr + dataAttr)
                 filterItr = filterDatapointGenerator(pointItr, filterFun)
                 convItr = convertedDatapointGenerator(filterItr, 
                                            convFunNum(dataAttr),
-                                           skipOnErr = False)
-                return organizeData(convItr, dataAttr)
-            
-            data = getdata(stations[0])
-            result = calculateLinearRegression(data[xField], data[yField])
+                                           skipOnErr = True)
+                data = organizeData(convItr, dataAttr)
+                log.info('data: {}'.format(data))
+                if (len(data[xField]) < 1) or (len(data[yField]) < 1):
+                    return data, None
+                else:
+                    result = calculateLinearRegression(data[xField], 
+                                                data[yField])
+                    return data, result
+            #create the result layer
             newLayer = createVectorLayer(layer, "new", copyAttr)
-            addResultFields(newLayer, result)
-            mergeResult = mergeDicts(data,result, excluded = dataAttr)
-            newFeature = makeFeature(newLayer, mergeResult)
-            checkTrue(newLayer.startEditing())
-            newLayer.addFeatures([newFeature], makeSelected = False)
-            checkTrue(newLayer.commitChanges())
-           # newLayer.removeSelection()
+            firstRun = True
+            for station in stations:
+                #get result for one station
+                data, result = getdata(station)
+                if result == None:
+                    continue
+                if firstRun:
+                    #add the add the result attributes as fields in new layer
+                    addResultFields(newLayer, result)
+                    firstRun = False
+                mergeResult = mergeDicts(data, result, excluded = dataAttr)
+                newFeature = makeFeature(newLayer, mergeResult)
+                checkTrue(newLayer.startEditing())
+                newLayer.addFeatures([newFeature], makeSelected = False)
+                checkTrue(newLayer.commitChanges())
             QgsMapLayerRegistry.instance().addMapLayer(newLayer)
