@@ -195,7 +195,27 @@ class ToolsTest(unittest.TestCase):
                 for key in point:
                     if key in ['DATE', 'TAVG']:
                         self.assertEqual(type(point[key]), float)
-                        
+    def test_convertDatapointGenerator_exception(self):
+        '''Test the convertDatapointGenerator when the conv function 
+        raises exception'''
+        station = 'USC00393316'
+        points = [{'date' : 1, 'year' : 'a'}, 
+                  {'date' : 1, 'year' : 'a'}]
+        def errorFun(a):
+            raise Exception('exception')
+        conv1 = convertedDatapointGenerator(points, errorFun , 
+                                                    skipOnErr = True)
+        conv2 = convertedDatapointGenerator(points, errorFun , 
+                                                    skipOnErr = False)
+        for i in conv1:
+            pass
+        try:
+            conv2.next()
+        except Exception:
+            pass
+        else:
+            self.fail('Last call should have raised exception')
+            
     def test_organizeData(self):
         '''Test the organizeData function'''
         stationNames = ['USC00393316', 'USW00094040', 'USS0011J06S',
