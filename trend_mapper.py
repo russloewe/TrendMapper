@@ -34,7 +34,7 @@ from trend_mapper_dialog import TrendMapperDialog
 import os.path
 #import the custom logger
 from trend_mapper_logger import myLogger
-log = myLogger(myLogger.INFO)
+log = myLogger()
 
 import cProfile
 
@@ -268,7 +268,6 @@ class TrendMapper:
                                            convFunNum(dataAttr),
                                            skipOnErr = True)
                 data = organizeData(convItr, dataAttr)
-                log.info('data: {}'.format(data))
                 if (len(data[xField]) < 1) or (len(data[yField]) < 1):
                     return data, None
                 else:
@@ -276,7 +275,7 @@ class TrendMapper:
                                                 data[yField])
                     return data, result
             #create the result layer
-            newLayer = createVectorLayer(layer, "new", copyAttr)
+            newLayer = createVectorLayer(layer, outputLayerName, copyAttr)
             firstRun = True
             for station in stations:
                 #get result for one station

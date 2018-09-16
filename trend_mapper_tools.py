@@ -4,7 +4,7 @@ from qgis.PyQt.QtCore import QVariant, QPyNullVariant
 # Initialize Qt resources from file resources.py
 import os.path
 from trend_mapper_logger import myLogger
-log = myLogger(myLogger.INFO)
+log = myLogger()
 
 
 
