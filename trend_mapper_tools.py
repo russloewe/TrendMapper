@@ -207,17 +207,6 @@ def mergeDicts(x, y, excluded=[]):
             z[key] = y[key]
     return z
 
-def splitDict(dic, keys):
-    '''split a dictionary return both, with keys in first'''
-    dic1 = {}
-    dic2 = {}
-    for k in dic:
-        if k in keys:
-            dic1[key] = dic[key]
-        else:
-            dic2[key] = dic[key]
-    return dic1, dic2
-
 def filterFun(point):
     for key in point:
         if type(point[key]) == QPyNullVariant:
