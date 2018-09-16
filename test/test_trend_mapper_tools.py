@@ -243,6 +243,12 @@ class ToolsTest(unittest.TestCase):
             if name not in newFields:
                 self.fail('{} not in new layer fields'.format(name))
     
+    def test_createVectorLayer_noname(self):
+        '''Test the createVectorLayer with no name provided'''
+        attr = ['station', 'date', 'longitude']
+        newLayer = createVectorLayer(self.layer_yearly, '', attr)
+        self.assertEqual(str(newLayer.name()), 'test_noaa_yearly_new')
+        
     def test_createVectorLayer_wrongCol(self):
         '''Test createVectorLayer with wrong column name'''
         attr = ['---station', '---date', '---longitude']
