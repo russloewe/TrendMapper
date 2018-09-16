@@ -46,7 +46,7 @@ def addResultFields(layer, result):
     for i in result:
         checkTrue(layer.dataProvider().addAttributes([QgsField(i, 
                                          QVariant.Double)]))
-    checkTrue(layer.updateFields())
+    layer.updateFields()
     checkTrue(layer.commitChanges())
     
 def createVectorLayer(srcLayer, newLayerName, fieldsToCopy):
@@ -190,19 +190,9 @@ def getLayerByName(name):
             return lyr
     raise AttributeError('Could not find layer: "{}"'.format(name))
             
-def isNum(x):
-    '''Return true if each element of x is float or integer'''
-    for i in x:
-        if (type(i) != int) and (type(i) != float):
-            return False
-    return True
-            
-def checkTrue(fun):
-    def catcher(*args, **kargs):
-        result = fun(*args, **kargs)
-        if  result != True:
-            raise ValueError('{} returned {}'.format(fun.__name__, result))
-    return catcher
+def checkTrue(result):
+    if  result != True:
+        raise ValueError('Function returned False')
 
 def mergeDicts(x, y, excluded=[]):
     for key in x:
