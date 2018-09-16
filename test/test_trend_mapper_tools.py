@@ -279,7 +279,31 @@ class ToolsTest(unittest.TestCase):
         else:
             self.fail('AttributeError should have been raised for wrong'\
                       ' column name')
-                
+    def test_getLayerByName(self):
+        '''Test the getLayerByName function'''
+        layer = getLayerByName('test_noaa_yearly')
+        self.assertEqual(str(layer.name()), 'test_noaa_yearly')
+        try:
+            layer = getLayerByName('noLayer')
+        except AttributeError:
+            pass
+        else:
+            self.fail('The last call should have raised an'\
+                                                ' AttributeError')
+    def test_checker(self):
+        ''' Test the checker function'''
+        def false():
+            return False
+        def true():
+            return True
+        checkTrue(true())
+        try:
+            checkTrue(false())
+        except ValueError:
+            pass
+        else:
+            self.fail('last call should have raised exception')
+        
 if __name__ == "__main__":
     suite = unittest.makeSuite(ToolsTest)
     runner = unittest.TextTestRunner(verbosity=2)
