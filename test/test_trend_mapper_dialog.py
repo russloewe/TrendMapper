@@ -91,27 +91,14 @@ class TrendMapperDialogTest(unittest.TestCase):
         
     def test_checkboxGetters(self):
         '''test all of the checkbox getter functions'''
-        self.dialog.discardBadFitCheck.setChecked(True)
-        self.dialog.filterOutliersCheck.setChecked(True)
         self.dialog.exportRisidualsCheck.setChecked(True)
-        
-        self.assertEqual(self.dialog.getDiscardBadFitOption(), True)
+        self.dialog.xDateCheck.setChecked(True)
         self.assertEqual(self.dialog.getExportRisidualsOption(), True)
-        self.assertEqual(self.dialog.getFilterOutliersOption(), True)
-
-        self.dialog.discardBadFitCheck.setChecked(False)
-        self.dialog.filterOutliersCheck.setChecked(False)
+        self.assertEqual(self.dialog.getXDateFormatCheckbok(), True)
         self.dialog.exportRisidualsCheck.setChecked(False)
-        
-        self.assertEqual(self.dialog.getDiscardBadFitOption(), False)
+        self.dialog.xDateCheck.setChecked(False)
         self.assertEqual(self.dialog.getExportRisidualsOption(), False)
-        self.assertEqual(self.dialog.getFilterOutliersOption(), False)
-        
-    def test_getThresholdValue(self):
-        '''test that the threshold value is correct'''
-        self.dialog.outlierThresholdLine.setText('2')
-        self.assertEqual(self.dialog.getThresholdValue(), 2)
-        
+        self.assertEqual(self.dialog.getXDateFormatCheckbok(), False)
         
     def test_getOutputLayerName(self):
         '''check that the output layer name is correct'''
