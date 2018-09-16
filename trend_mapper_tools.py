@@ -127,7 +127,6 @@ def datapointGenerator(featureGenerator, attList):
     log.debug("datapointGenerator({}, {})".format(featureGenerator,
                                                     attList))
     for feature in featureGenerator:
-        #print feature
         result = {}
         for key in attList:
             result[key] = feature[key]
