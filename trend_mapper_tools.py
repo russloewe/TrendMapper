@@ -93,28 +93,6 @@ def createVectorLayer(srcLayer, newLayerName, fieldsToCopy):
     checkTrue(vl.commitChanges())
     return vl
     
-    
-def getColType(layer, keyCol):
-    ''' Get the type for an attribute column in a layer. Just returns
-    the integer representation. Use to quickly check if a field is 
-    numeric or text, values in [7,10] are text.
-    
-    :param layer: The layer containing the column to check
-    :type layer: QgVectorLayer
-    
-    :param keyCol: The name of the column to check
-    :type keyCol: str
-    
-    :returns: The integer represention of the column type
-    :rtype: int
-    '''
-    log.debug('call("{}", "{}")'.format(layer, keyCol))
-    fields = layer.pendingFields()
-    for i in fields:
-        if str(i.name()) == keyCol:
-            return i.type()
-    return None
-    
 def getUniqueKeys(layer, keyCol):
     '''Get the list of distinct values from an attribute column
     
