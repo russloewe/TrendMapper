@@ -107,8 +107,6 @@ def getUniqueKeys(layer, keyCol):
     :rtype: array
     '''
     log.debug('call("{}", "{}")'.format(layer, keyCol))
-    if int(layer.featureCount()) < 1:
-        raise AttributeError('No features in layer: {}'.format(layer.name()))
     idx = layer.fieldNameIndex(keyCol)
     if idx < 0:
         raise ValueError('Could not get field index for "{}" on {}'\
