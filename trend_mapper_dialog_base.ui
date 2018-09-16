@@ -62,7 +62,7 @@
   <widget class="QComboBox" name="yFieldCombo">
    <property name="geometry">
     <rect>
-     <x>100</x>
+     <x>90</x>
      <y>200</y>
      <width>121</width>
      <height>22</height>
@@ -79,7 +79,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Export Risiduals</string>
+    <string>Export Stats</string>
    </property>
   </widget>
   <widget class="QCheckBox" name="filterOutliersCheck">
@@ -207,6 +207,9 @@
      <width>256</width>
      <height>192</height>
     </rect>
+   </property>
+   <property name="selectionMode">
+    <enum>QAbstractItemView::MultiSelection</enum>
    </property>
   </widget>
   <zorder>inputLayerCombo</zorder>
