@@ -243,6 +243,7 @@ class TrendMapper:
             xField = self.dlg.getXFieldCombo()
             yField = self.dlg.getYFieldCombo()
             outputLayerName = self.dlg.getOutputLayerName()
+            copyAttr = self.dlg.getCopyAttrSelected()
             #need to add copy attributes
             log.debug('''Trendmapper runner params:
                         inputLayerName: {}
@@ -256,7 +257,7 @@ class TrendMapper:
             #grab a reference to the input layer
             layer = getLayerByName(inputLayerName)
             dataAttr = [xField, yField]
-            copyAttr = [keyCol] #need to add way to get more from user
+            copyAttr.append(keyCol) #need to add way to get more from user
             stations = getUniqueKeys(layer, keyCol) #get the list of stations to process
             
             #create a function create a result feature for each station set
