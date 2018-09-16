@@ -27,9 +27,6 @@ def makeFeature(dstLayer, feature):
         name = str(field.name())
         attrVal = feature[name]
         newFeature[name] = attrVal
-    #checkTrue(dstLayer.startEditing())
-   # dstLayer.addFeatures(newFeature)
-    #checkTrue(dstLayer.commitChanges())
     return newFeature
         
 
@@ -142,7 +139,6 @@ def filterDatapointGenerator(datapointGen, filterFun):
     log.debug("filterDatapointGenerator({}, {})".format( datapointGen, 
                                                   filterFun.__name__))
     for data in datapointGen:
-        #print data
         if filterFun(data):
             yield data
 
@@ -151,7 +147,6 @@ def convertedDatapointGenerator(datapointGen, convertFun, skipOnErr=True):
     log.debug('mapDatapointGenerator({}, {})'.format(datapointGen, 
                                                 convertFun.__name__))
     for data in datapointGen:
-       #print data
         try:
             dataOut = convertFun(data)
         except Exception as e:
