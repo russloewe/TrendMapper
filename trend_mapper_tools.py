@@ -166,17 +166,13 @@ def organizeData(datapointGen, dataAttr):
     for key in dataAttr:
         dataset[key] = []
     for data in datapointGen:
-        log.info("org {}".format(data))
         for key in data:
             #collect all the dataAttr in a list
             if key in dataAttr:
                 dataset[key].append(data[key])
-            #copy the geometry blob and everything else once
+            #copy the geometry blob and everything else one time
             elif key not in dataset:
-                if (key == 'GEOMETRY') and (type(data[key]) != QgsGeometry):
-                    pass
-                else:
-                    dataset[key] = data[key]
+                dataset[key] = data[key]
     return dataset
         
 def getLayerByName(name):
