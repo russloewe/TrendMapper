@@ -92,13 +92,13 @@ class TrendMapperDialogTest(unittest.TestCase):
     def test_checkboxGetters(self):
         '''test all of the checkbox getter functions'''
         self.dialog.exportRisidualsCheck.setChecked(True)
-        self.dialog.xDateCheck.setChecked(True)
+        self.dialog.dateCheck.setChecked(True)
         self.assertEqual(self.dialog.getExportRisidualsOption(), True)
-        self.assertEqual(self.dialog.getXDateFormatCheckbok(), True)
+        self.assertEqual(self.dialog.getDateFormatCheckbok(), True)
         self.dialog.exportRisidualsCheck.setChecked(False)
-        self.dialog.xDateCheck.setChecked(False)
+        self.dialog.dateCheck.setChecked(False)
         self.assertEqual(self.dialog.getExportRisidualsOption(), False)
-        self.assertEqual(self.dialog.getXDateFormatCheckbok(), False)
+        self.assertEqual(self.dialog.getDateFormatCheckbok(), False)
         
     def test_getOutputLayerName(self):
         '''check that the output layer name is correct'''
@@ -107,13 +107,16 @@ class TrendMapperDialogTest(unittest.TestCase):
         
     def test_comboGetters(self):
         '''test the three functions that get the attributes for analysisi'''
-        self.dialog.setLayerAttributesCombos(['one', 'two', 'three'])
+        self.dialog.setLayerAttributesCombos(['one', 'two', 'three', 
+                                                'four'])
         self.dialog.categoryCombo.setCurrentIndex(0)
         self.dialog.xFieldCombo.setCurrentIndex(1)
         self.dialog.yFieldCombo.setCurrentIndex(2)
+        self.dialog.dateFormatCombo.setCurrentIndex(3)
         self.assertEqual(self.dialog.getCategoryCombo(), 'one')
         self.assertEqual(self.dialog.getXFieldCombo(), 'two')
         self.assertEqual(self.dialog.getYFieldCombo(), 'three')
+        self.assertEqual(self.dialog.getDateFormatCombo(), 'four')
         
     def test_Callback(self):
         '''test that the callback function works'''

@@ -245,7 +245,7 @@ class TrendMapper:
             outputLayerName = self.dlg.getOutputLayerName()
             copyAttr = self.dlg.getCopyAttrSelected()
             statsCheck = self.dlg.getExportRisidualsOption()
-            formatXCol = self.dlg.getXDateFormatCheckbok()
+            formatDateCol = self.dlg.getDateFormatCheckbok()
             #need to add copy attributes
             log.debug('''Trendmapper runner params:
                         inputLayerName: {}
@@ -262,13 +262,21 @@ class TrendMapper:
             copyAttr.append(keyCol) #need to add way to get more from user
             stations = getUniqueKeys(layer, keyCol) #get the list of stations to process
             
+            #construct the conversion function
+            if formatDateCol:
+                dateC = self.dlg.getDateFormatCombo()
+                dateForm = self.dlg.getDateFormatText()
+                convFunction = convFunNum(dataAttr, dateCol = dateC,
+                                                dateFormat = dateForm)
+            else:
+                convFunction = convFunNum(dataAttr)
             #create a function create a result feature for each station set
             def getdata(station):
                 featureItr = featureGenerator(layer, station, keyCol)
                 pointItr = datapointGenerator(featureItr, copyAttr + dataAttr)
                 filterItr = filterDatapointGenerator(pointItr, filterFun)
                 convItr = convertedDatapointGenerator(filterItr, 
-                                           convFunNum(dataAttr),
+                                           convFunction,
                                            skipOnErr = True)
                 data = organizeData(convItr, dataAttr)
                 if (len(data[xField]) < 1) or (len(data[yField]) < 1):

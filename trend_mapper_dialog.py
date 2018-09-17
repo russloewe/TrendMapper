@@ -60,19 +60,30 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         return(str(self.xFieldCombo.currentText()))
         
     def getYFieldCombo(self):
+        '''get data column for conversion
+        returns string'''
+        return(str(self.yFieldCombo.currentText()))
+    
+    def getDateFormatCombo(self):
         '''get data column for dependent variable in 
         regresison analysis
         returns string'''
-        return(str(self.yFieldCombo.currentText()))
+        return(str(self.dateFormatCombo.currentText()))
         
-    def getXDateFormatCheckbok(self):
+    def getDateFormatCheckbok(self):
         '''get status from the date format checkbox'''
-        return(self.xDateCheck.isChecked())
+        return(self.dateCheck.isChecked())
         
     def getExportRisidualsOption(self):
         '''returns Export Riduals choice.
             returns boolean'''
         return(self.exportRisidualsCheck.isChecked())
+    
+    def getDateFormatText(self):
+        '''gets the name for the output layer from the 
+        outputlayer line edit.
+        returns string'''
+        return(self.dateFormatLineEdit.text())
         
     def getOutputLayerName(self):
         '''gets the name for the output layer from the 
@@ -101,11 +112,13 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         self.xFieldCombo.clear()
         self.yFieldCombo.clear()
         self.copyAttr.clear()
+        self.dateFormatCombo.clear()
         for item in inputList:
             self.categoryCombo.addItem(item)
             self.xFieldCombo.addItem(item)
             self.yFieldCombo.addItem(item)
             self.copyAttr.addItem(item)
+            self.dateFormatCombo.addItem(item)
          
     def setAttributeComboCallback(self, callback_function):
         '''recieves a function to connect with the
