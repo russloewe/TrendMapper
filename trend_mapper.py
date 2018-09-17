@@ -20,11 +20,12 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QPyNullVariant
+from qgis.core import QgsMapLayerRegistry
+from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
 from PyQt4.QtGui import QAction, QIcon
 from PyQt4.QtSql import QSqlDatabase
-from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI, QgsFeatureRequest, QgsField, QgsVectorLayer, QgsFeature
-from qgis.PyQt.QtCore import QVariant
+
+#from qgis.PyQt.QtCore import QVariant
 # Initialize Qt resources from file resources.py
 import resources
 from analysis import calculateLinearRegression
