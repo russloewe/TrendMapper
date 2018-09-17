@@ -1,6 +1,7 @@
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QPyNullVariant
+from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication#, QPyNullVariant
 from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI, QgsFeatureRequest, QgsField, QgsVectorLayer, QgsFeature, QgsGeometry
 from qgis.PyQt.QtCore import QVariant, QPyNullVariant
+from datetime import datetime
 # Initialize Qt resources from file resources.py
 import os.path
 from trend_mapper_logger import myLogger
@@ -212,12 +213,25 @@ def filterFun(point):
             return False
     return True
 
-def convFunNum(attr):
-    def fun(point):
-        for key in point:
-            if key in attr:
-                point[key] = float(point[key])
-            elif type(point[key]) != QgsGeometry:
-                point[key] = str(point[key])
-        return point
+def convFunNum(attr, dateCol=None, dateFormat=None):
+    if (dateCol != None) and (dateFormat != None):
+        def fun(point):
+            for key in point:
+                if key == dateCol:
+                    utime = datetime.strptime(point[key], dateFormat)
+                    time = utime.toordinal()
+                    point[key] = time
+                elif key in attr:
+                    point[key] = float(point[key])
+                elif type(point[key]) != QgsGeometry:
+                    point[key] = str(point[key])
+            return point
+    else:
+        def fun(point):
+            for key in point:
+                if key in attr:
+                    point[key] = float(point[key])
+                elif type(point[key]) != QgsGeometry:
+                    point[key] = str(point[key])
+            return point
     return fun
