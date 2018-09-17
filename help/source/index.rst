@@ -11,6 +11,18 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+.. automodule:: trend_mapper
+    :members:
+    
+.. automodule:: trend_mapper_tools
+    :members:
+    
+.. automodule:: trend_mapper_logger
+    :members:
+    
+.. automodule:: analysis
+    :members:
+    
 Indices and tables
 ==================
 
