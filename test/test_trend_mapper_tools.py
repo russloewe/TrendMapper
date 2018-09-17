@@ -34,26 +34,11 @@ import faulthandler
 faulthandler.enable()
 
 #sys.settrace(trace)
-def filterFun(point):
-    for key in point:
-        if point[key] == NULL:
-            return False
-    return True
 def convFun(point):
     for key in point:
         if type(point[key]) != QgsGeometry:
             point[key] = str(point[key])
     return point
-
-def convFunNum(attr):
-    def fun(point):
-        for key in point:
-            if key in attr:
-                point[key] = float(point[key])
-            elif type(point[key]) != QgsGeometry:
-                point[key] = str(point[key])
-        return point
-    return fun
 
 class ToolsTest(unittest.TestCase):
     """Test dialog works."""
@@ -303,6 +288,16 @@ class ToolsTest(unittest.TestCase):
             pass
         else:
             self.fail('last call should have raised exception')
+    
+    def test_convertFun(self):
+        '''test the convert function with the date converter'''
+        test = {'x' : '2.0', 'y' : 'test', 'd' : '2018-12-28'}
+        function = convFunNum(['x'])
+        converted = function(test)
+        self.assertEqual(type(converted['x']), float)
+        function = convFunNum(['x'], dateCol = 'd', dateFormat = '%Y-%m-%d')
+        converted = function(test)
+        self.assertEqual(converted['d'], 737056)
         
 if __name__ == "__main__":
     suite = unittest.makeSuite(ToolsTest)
