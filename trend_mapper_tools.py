@@ -1,5 +1,5 @@
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication#, QPyNullVariant
-from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI, QgsFeatureRequest, QgsField, QgsVectorLayer, QgsFeature, QgsGeometry
+from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI, QgsFeatureRequest, QgsField, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem
 from qgis.PyQt.QtCore import QVariant, QPyNullVariant
 from datetime import datetime
 # Initialize Qt resources from file resources.py
@@ -23,11 +23,17 @@ def makeFeature(dstLayer, feature):
     dstFields = dstLayer.pendingFields()
     newFeature = QgsFeature()
     newFeature.setFields(dstFields)
+    if 'GEOMETRY' not in feature:
+        raise KeyError('No geometry in the supplied feature dict')
     newFeature.setGeometry(feature['GEOMETRY'])
-    for field in newFeature.fields():
-        name = str(field.name())
-        attrVal = feature[name]
-        newFeature[name] = attrVal
+    for name in feature:
+        if name == 'GEOMETRY':
+            continue
+        newFeature[name] = feature[name]
+    #for field in newFeature.fields():
+       # name = str(field.name())
+       # attrVal = feature[name]
+       # newFeature[name] = attrVal
     return newFeature
         
 
@@ -83,7 +89,7 @@ def createVectorLayer(srcLayer, newLayerName, fieldsToCopy):
         if name not in [str(i.name()) for i in newFields]:
             raise AttributeError('Field {} not in new layer'.format(name))
     #create a new point layer
-    vl = QgsVectorLayer("Point", newLayerName, "memory")
+    vl = QgsVectorLayer("Point?crs=epsg:27700&field=mytext:string(255)&field=mytext2:string(255)", newLayerName, "memory")
     pr = vl.dataProvider()
     #add the subset of fields to the new layer
     checkTrue(vl.startEditing())
@@ -191,9 +197,11 @@ def getLayerByName(name):
     raise AttributeError('Could not find layer: "{}"'.format(name))
             
 def checkTrue(result):
-    if  result != True:
+    if  result == False:
         raise ValueError('Function returned False')
-
+    elif result != True:
+        raise ValueError('Function returned not True or False')
+        
 def mergeDicts(x, y, excluded=[]):
     for key in x:
         if key in y:
@@ -213,11 +221,11 @@ def filterFun(point):
             return False
     return True
 
-def convFunNum(attr, dateCol=None, dateFormat=None):
-    if (dateCol != None) and (dateFormat != None):
+def convFunNum(attr, dateColumn=None, dateFormat=None):
+    if (dateColumn != None) and (dateFormat != None):
         def fun(point):
             for key in point:
-                if key == dateCol:
+                if key == dateColumn:
                     utime = datetime.strptime(point[key], dateFormat)
                     time = utime.toordinal()
                     point[key] = time
