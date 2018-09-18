@@ -295,7 +295,7 @@ class ToolsTest(unittest.TestCase):
         function = convFunNum(['x'])
         converted = function(test)
         self.assertEqual(type(converted['x']), float)
-        function = convFunNum(['x'], dateCol = 'd', dateFormat = '%Y-%m-%d')
+        function = convFunNum(['x'], dateColumn = 'd', dateFormat = '%Y-%m-%d')
         converted = function(test)
         self.assertEqual(converted['d'], 737056)
     
