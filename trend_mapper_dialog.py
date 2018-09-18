@@ -21,16 +21,15 @@
  ***************************************************************************/
 """
 
-import os
-
-from PyQt4 import QtGui, uic
+import os 
+from PyQt4 import QtGui, uic, QtCore
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'trend_mapper_dialog_base.ui'))
 
 
 class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
-    def __init__(self, parent=None):
+    def __init__(self, iface, parent=None):
         """Constructor."""
         super(TrendMapperDialog, self).__init__(parent)
         # Set up the user interface from Designer.
@@ -39,6 +38,7 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
+        self.iface = iface
         
     def getInputLayer(self):
         '''return vector layer from combo box for 
