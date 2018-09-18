@@ -38,15 +38,15 @@ LOCALES =
 # translation
 SOURCES = \
 	__init__.py \
-	trend_mapper.py trend_mapper_dialog.py analysis.py trend_mapper_tools.py trend_mapper_logger.py
+	trend_mapper.py trend_mapper_dialog.py analysis.py trend_mapper_tools.py trend_mapper_logger.py trend_mapper_status.py
 
 PLUGINNAME = TrendMapper
 
 PY_FILES = \
 	__init__.py \
-	trend_mapper.py trend_mapper_dialog.py analysis.py trend_mapper_tools.py trend_mapper_logger.py
+	trend_mapper.py trend_mapper_dialog.py analysis.py trend_mapper_tools.py trend_mapper_logger.py trend_mapper_status.py
 
-UI_FILES = trend_mapper_dialog_base.ui
+UI_FILES = trend_mapper_dialog_base.ui trend_mapper_status.ui
 
 EXTRAS = metadata.txt icon.png
 
