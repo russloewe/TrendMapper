@@ -54,7 +54,7 @@ class ToolsTest(unittest.TestCase):
         self.layer_daily = QgsVectorLayer(
                                     './test/test_noaa_daily.sqlite', 
                                     'test_noaa_daily', 'ogr')
-        
+        QgsMapLayerRegistry.instance().addMapLayer(self.layer_yearly)
         
 
     def tearDown(self):
@@ -298,6 +298,30 @@ class ToolsTest(unittest.TestCase):
         function = convFunNum(['x'], dateCol = 'd', dateFormat = '%Y-%m-%d')
         converted = function(test)
         self.assertEqual(converted['d'], 737056)
+    
+    def test_makeFeature(self):
+        '''Test the makeFeature function'''
+        featureDict = {'date' : 2014, 'station' : 'new', 'GEOMETRY' : QgsGeometry()}
+        feature = makeFeature(self.layer_yearly, featureDict)
+        self.assertEqual(type(feature), QgsFeature)
+        
+    def test_makeFeature_nogeom(self):
+        '''Test the makeFeature function with no geometry'''
+        featureDict = {}
+        try:
+            makeFeature(self.layer_yearly, featureDict)
+        except KeyError:
+            pass
+        else:
+            self.fail('the last call should have raised KeyError')
+        
+    def test_addResultFields(self):
+        '''Test the addResultFields function'''
+        attr = ['station', 'date', 'longitude']
+        newLayer = createVectorLayer(self.layer_yearly, 'new', attr)
+        result = {'slope' : 3, 'mean' : 4}
+        addResultFields(newLayer, result)
+        self.assertTrue('slope' in [str(i.name()) for i in newLayer.pendingFields()])
         
 if __name__ == "__main__":
     suite = unittest.makeSuite(ToolsTest)
