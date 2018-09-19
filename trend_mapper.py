@@ -210,14 +210,14 @@ class TrendMapper:
             layer_obj = allLayers[allLayerNames.index(layerName)]
             fields = layer_obj.pendingFields()
             self.dlg.setLayerAttributesCombos([field.name() for field in fields])
-            
-    
-            
-    
         
     def message(self, message):
         '''push a message to the status bar'''
         self.iface.messageBar().pushMessage('Info', message)
+        
+    def updateProgress(self):
+        progress = int(self.counter / float(self.totalCounter) * 100)
+        self.status.ProgressBar(progress)
         
     def run(self, test_run=False):
         """Run method that performs all the real work"""
@@ -229,53 +229,59 @@ class TrendMapper:
         if not test_run:
             self.dlg.setAttributeComboCallback(self.updateAttributeCombos)
             self.updateAttributeCombos()
-
         # show the dialog
         self.dlg.show()
         # Run the dialog event loop
-        if test_run:
-            result = True
-        else:
-            result = self.dlg.exec_()
+        result = self.dlg.exec_()
         # See if OK was pressed
-        
         if result:
-            log.debug('runner called')
-            # get all the data from the dialog
-            inputLayerName = self.dlg.getInputLayer()
-            keyCol = self.dlg.getCategoryCombo()
-            xField = self.dlg.getXFieldCombo()
-            yField = self.dlg.getYFieldCombo()
-            outputLayerName = self.dlg.getOutputLayerName()
-            copyAttr = self.dlg.getCopyAttrSelected()
-            statsCheck = self.dlg.getExportRisidualsOption()
-            formatDateCol = self.dlg.getDateFormatCheckbok()
-            dateCol = self.dlg.getDateFormatCombo()
-            dateFormat = self.dlg.getDateFormatText()
-            log.debug('''Trendmapper runner params:
-                        inputLayerName: {}
-                        keyCol: {}
-                        xField: {}
-                        yField: {}
-                        outputLayerName: {}'''.format(
-                        inputLayerName, keyCol, xField,
-                        yField, outputLayerName))
-            
-            #grab a reference to the input layer
-            layer = getLayerByName(inputLayerName)
-            copyAttr.append(keyCol) #need to add way to get more from user
-            stations = getUniqueKeys(layer, keyCol) #get the list of stations to process
-            #create the result layer
-            newLayer = createVectorLayer(layer, outputLayerName, copyAttr)
-            QgsMapLayerRegistry.instance().addMapLayer(newLayer)
-            tmprocess = TrendMapperProcess(newLayer, stations, xField, yField, 
-                                    copyAttr)
-            tmprocess.createConvFunction(formatDateCol, dateCol, dateFormat)
-            tmprocess.createDataFunction(layer, keyCol, statsCheck)
-            tmprocess.run()   
+            self.process()
+    
+    def process(self):
+        log.debug('runner called')
+        # get all the data from the dialog
+        inputLayerName = self.dlg.getInputLayer()
+        keyCol = self.dlg.getCategoryCombo()
+        xField = self.dlg.getXFieldCombo()
+        yField = self.dlg.getYFieldCombo()
+        outputLayerName = self.dlg.getOutputLayerName()
+        copyAttr = self.dlg.getCopyAttrSelected()
+        statsCheck = self.dlg.getExportRisidualsOption()
+        formatDateCol = self.dlg.getDateFormatCheckbok()
+        dateCol = self.dlg.getDateFormatCombo()
+        dateFormat = self.dlg.getDateFormatText()
+        log.debug('''Trendmapper runner params:
+                    inputLayerName: {}
+                    keyCol: {}
+                    xField: {}
+                    yField: {}
+                    outputLayerName: {}'''.format(
+                    inputLayerName, keyCol, xField,
+                    yField, outputLayerName))
+        
+        #grab a reference to the input layer
+        layer = getLayerByName(inputLayerName)
+        copyAttr.append(keyCol) #need to add way to get more from user
+        stations = getUniqueKeys(layer, keyCol) #get the list of stations to process
+        #create the result layer
+        newLayer = createVectorLayer(layer, outputLayerName, copyAttr)
+        tmprocess = TrendMapperProcess(newLayer, stations, xField, yField, 
+                                copyAttr, self.updateProgress)
+        tmprocess.createConvFunction(formatDateCol, dateCol, dateFormat)
+        tmprocess.createDataFunction(layer, keyCol, statsCheck)
+        
+        self.status = TrendMapperStatus()
+        self.status.show()
+        self.status.setProgressBar('New', '')
+        
+        self.status.exec_()
+        
+        tmprocess.run()   
+        self.status.close()
+        QgsMapLayerRegistry.instance().addMapLayer(newLayer)
 
 class TrendMapperProcess():
-    def __init__(self, newLayer, stations, xField, yField, copyAttr):
+    def __init__(self, newLayer, stations, xField, yField, copyAttr, prgBar):
         self.counter = 0
         self.totalCounter = len(stations)
         self.stations = stations
@@ -284,9 +290,7 @@ class TrendMapperProcess():
         self.xField = xField
         self.yField = yField
         self.newLayer = newLayer
-        self.status = TrendMapperStatus(self.abort)
-        self.status.show()
-        self.status.setProgressBar('New', '')
+        self.updateProgress = prgBar
         self.running = True
 
     def abort(self):
@@ -325,7 +329,7 @@ class TrendMapperProcess():
             if self.running == False:
                 break
             self.process(station)
-        self.status.close()
+        
         
     def process(self, station):
         self.counter += 1
@@ -345,7 +349,5 @@ class TrendMapperProcess():
         checkTrue(self.newLayer.commitChanges())
 
     
-    def updateProgress(self):
-        progress = int(self.counter / float(self.totalCounter) * 100)
-        self.status.ProgressBar(progress)
+    
 
