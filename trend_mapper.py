@@ -36,7 +36,7 @@ import os.path
 #import the custom logger
 from trend_mapper_logger import myLogger
 log = myLogger()
-
+from threading import Thread
 
 class TrendMapper:
     """QGIS Plugin Implementation."""
@@ -81,6 +81,7 @@ class TrendMapper:
             self.toolbar.setObjectName(u'TrendMapper')
         self.totalCounter = 1
         self.counter = 0
+        
         
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -214,11 +215,7 @@ class TrendMapper:
     def message(self, message):
         '''push a message to the status bar'''
         self.iface.messageBar().pushMessage('Info', message)
-        
-    def updateProgress(self):
-        progress = int(self.counter / float(self.totalCounter) * 100)
-        self.status.ProgressBar(progress)
-        
+
     def run(self, test_run=False):
         """Run method that performs all the real work"""
         
@@ -231,10 +228,13 @@ class TrendMapper:
             self.updateAttributeCombos()
         # show the dialog
         self.dlg.show()
+        #connect the runbutton
+        self.dlg.runButton.clicked.connect(self.process)
         # Run the dialog event loop
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
+            
             self.process()
     
     def process(self):
@@ -266,22 +266,20 @@ class TrendMapper:
         #create the result layer
         newLayer = createVectorLayer(layer, outputLayerName, copyAttr)
         tmprocess = TrendMapperProcess(newLayer, stations, xField, yField, 
-                                copyAttr, self.updateProgress)
+                                copyAttr)
         tmprocess.createConvFunction(formatDateCol, dateCol, dateFormat)
         tmprocess.createDataFunction(layer, keyCol, statsCheck)
         
-        self.status = TrendMapperStatus()
-        self.status.show()
-        self.status.setProgressBar('New', '')
         
-        self.status.exec_()
         
-        tmprocess.run()   
-        self.status.close()
+        tmprocess.start()   
+        tmprocess.join()
+        
         QgsMapLayerRegistry.instance().addMapLayer(newLayer)
 
-class TrendMapperProcess():
-    def __init__(self, newLayer, stations, xField, yField, copyAttr, prgBar):
+class TrendMapperProcess(Thread):
+    def __init__(self, newLayer, stations, xField, yField, copyAttr):
+        super(TrendMapperProcess, self).__init__()
         self.counter = 0
         self.totalCounter = len(stations)
         self.stations = stations
@@ -290,9 +288,11 @@ class TrendMapperProcess():
         self.xField = xField
         self.yField = yField
         self.newLayer = newLayer
-        self.updateProgress = prgBar
         self.running = True
-
+        self.status = TrendMapperStatus()
+        self.status.show()
+        self.status.setProgressBar('New', '')
+            
     def abort(self):
         self.running = False
             
@@ -326,10 +326,10 @@ class TrendMapperProcess():
         newFeatures = []
         self.firstRun = True
         for station in self.stations:
-            if self.running == False:
+            if self.status.running == False:
                 break
             self.process(station)
-        
+        self.status.close()
         
     def process(self, station):
         self.counter += 1
@@ -348,6 +348,8 @@ class TrendMapperProcess():
         self.newLayer.addFeatures([newFeature], makeSelected = False)
         checkTrue(self.newLayer.commitChanges())
 
-    
+    def updateProgress(self):
+        progress = int(self.counter / float(self.totalCounter) * 100)
+        self.status.ProgressBar(progress)
     
 

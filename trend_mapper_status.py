@@ -29,7 +29,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 
 class TrendMapperStatus(QtGui.QDialog, FORM_CLASS):
-    def __init__(self, abortCallBack, parent=None):
+    def __init__(self, parent=None):
         """Constructor."""
         super(TrendMapperStatus, self).__init__(parent)
         # Set up the user interface from Designer.
@@ -38,7 +38,11 @@ class TrendMapperStatus(QtGui.QDialog, FORM_CLASS):
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
-        self.abortButton.clicked.connect(abortCallBack)
+        self.abortButton.clicked.connect(self.stopRun)
+        self.running = True
+        
+    def stopRun(self):
+        self.running = False
     
     def setProgressBar(self, main, text, maxVal=100):
         self.prgBar.setValue(0)
