@@ -23,6 +23,7 @@
 
 import os 
 from PyQt4 import QtGui, uic, QtCore
+from trend_mapper_status import TrendMapperStatus
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'trend_mapper_dialog_base.ui'))
@@ -39,7 +40,7 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
         self.iface = iface
-        
+            
     def getInputLayer(self):
         '''return vector layer from combo box for 
         analysis input
@@ -128,3 +129,33 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
          data.'''
         self.inputLayerCombo.currentIndexChanged.connect(
                                         callback_function)
+    def ProgressBarStatus(self, msg):
+        if self.prgWidget:
+            self.prgWidget.setText(msg)
+            
+    def message(self, message):
+        '''push a message to the status bar'''
+        self.iface.messageBar().pushMessage('Info', message)
+        
+    def setProgressBar(self, main, text, maxVal=100):
+        self.prgWidget = self.iface.messageBar().createMessage(main, text)
+        self.prgBar = QtGui.QProgressBar()
+        self.prgBar.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.prgBar.setValue(0)
+        self.prgBar.setMaximum(maxVal)
+        self.abortButton = QtGui.QPushButton('Abort', self)
+        self.msgText = QtGui.QLabel()
+        self.msgText.setText('')
+        self.prgWidget.layout().addWidget(self.msgText)
+        self.prgWidget.layout().addWidget(self.abortButton)
+        self.prgWidget.layout().addWidget(self.prgBar)
+        self.iface.messageBar().pushWidget(self.prgWidget,
+                                           self.iface.messageBar().INFO)
+                                           
+    def ProgressBar(self, value):
+        if self.prgWidget:
+            self.prgBar.setValue(value)
+            if (value == self.prgBar.maximum()):
+                self.iface.messageBar().clearWidgets()
+                self.iface.mapCanvas().refresh()
+                self.prgWidget = None

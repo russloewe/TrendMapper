@@ -21,8 +21,8 @@
  ***************************************************************************/
 """
 from qgis.core import QgsMapLayerRegistry
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
-from PyQt4.QtGui import QAction, QIcon
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
 from PyQt4.QtSql import QSqlDatabase
 from PyQt4 import QtGui, uic, QtCore
 # Initialize Qt resources from file resources.py
@@ -34,6 +34,7 @@ from trend_mapper_dialog import TrendMapperDialog
 from trend_mapper_status import TrendMapperStatus
 import os.path
 #import the custom logger
+from time import sleep
 from trend_mapper_logger import myLogger
 log = myLogger()
 from threading import Thread
@@ -211,10 +212,6 @@ class TrendMapper:
             layer_obj = allLayers[allLayerNames.index(layerName)]
             fields = layer_obj.pendingFields()
             self.dlg.setLayerAttributesCombos([field.name() for field in fields])
-        
-    def message(self, message):
-        '''push a message to the status bar'''
-        self.iface.messageBar().pushMessage('Info', message)
 
     def run(self, test_run=False):
         """Run method that performs all the real work"""
@@ -228,17 +225,16 @@ class TrendMapper:
             self.updateAttributeCombos()
         # show the dialog
         self.dlg.show()
-        #connect the runbutton
-        self.dlg.runButton.clicked.connect(self.process)
         # Run the dialog event loop
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
-            
             self.process()
-    
+            
+    def stp(self):
+        QgsMapLayerRegistry.instance().addMapLayer(self.newLayer)
+        
     def process(self):
-        log.debug('runner called')
         # get all the data from the dialog
         inputLayerName = self.dlg.getInputLayer()
         keyCol = self.dlg.getCategoryCombo()
@@ -250,34 +246,30 @@ class TrendMapper:
         formatDateCol = self.dlg.getDateFormatCheckbok()
         dateCol = self.dlg.getDateFormatCombo()
         dateFormat = self.dlg.getDateFormatText()
-        log.debug('''Trendmapper runner params:
-                    inputLayerName: {}
-                    keyCol: {}
-                    xField: {}
-                    yField: {}
-                    outputLayerName: {}'''.format(
-                    inputLayerName, keyCol, xField,
-                    yField, outputLayerName))
         
-        #grab a reference to the input layer
+        #start progressbar 
+        self.dlg.setProgressBar('TrendMapper', '')
+        
+        #set up the rest of the paramters for the worker
         layer = getLayerByName(inputLayerName)
-        copyAttr.append(keyCol) #need to add way to get more from user
-        stations = getUniqueKeys(layer, keyCol) #get the list of stations to process
-        #create the result layer
-        newLayer = createVectorLayer(layer, outputLayerName, copyAttr)
-        tmprocess = TrendMapperProcess(newLayer, stations, xField, yField, 
+        copyAttr.append(keyCol) 
+        self.dlg.ProgressBarStatus('Finding unique entries in {}'.format(keyCol))
+        stations = getUniqueKeys(layer, keyCol) 
+        #create the new layer
+        self.newLayer = createVectorLayer(layer, outputLayerName, copyAttr)
+        #set up the worker thread
+        tmprocess = TrendMapperProcess(self.newLayer, stations, xField, yField, 
                                 copyAttr)
         tmprocess.createConvFunction(formatDateCol, dateCol, dateFormat)
         tmprocess.createDataFunction(layer, keyCol, statsCheck)
-        
-        
-        
+        self.dlg.connect(tmprocess, tmprocess.progSig, self.dlg.ProgressBar)
+        self.dlg.connect(tmprocess, tmprocess.stopSig, self.stp)
+        self.dlg.connect(tmprocess, tmprocess.msgSig, self.dlg.message)
+        self.dlg.connect(tmprocess, tmprocess.prgmsgSig, self.dlg.ProgressBarStatus)
+        self.dlg.abortButton.clicked.connect(tmprocess.abort)
         tmprocess.start()   
-        tmprocess.join()
         
-        QgsMapLayerRegistry.instance().addMapLayer(newLayer)
-
-class TrendMapperProcess(Thread):
+class TrendMapperProcess(QThread):
     def __init__(self, newLayer, stations, xField, yField, copyAttr):
         super(TrendMapperProcess, self).__init__()
         self.counter = 0
@@ -289,11 +281,14 @@ class TrendMapperProcess(Thread):
         self.yField = yField
         self.newLayer = newLayer
         self.running = True
-        self.status = TrendMapperStatus()
-        self.status.show()
-        self.status.setProgressBar('New', '')
+        self.stopSig = QtCore.SIGNAL("stopSignal")
+        self.progSig = QtCore.SIGNAL("progress")
+        self.msgSig = QtCore.SIGNAL ("msgSignal")
+        self.prgmsgSig = QtCore.SIGNAL ("prgmsgSignal")
             
     def abort(self):
+        self.emit(self.progSig, 100)
+        self.emit(self.msgSig, 'Abort Called')
         self.running = False
             
     def createConvFunction(self, formatDateCol, dateCol, dateForm):
@@ -326,13 +321,14 @@ class TrendMapperProcess(Thread):
         newFeatures = []
         self.firstRun = True
         for station in self.stations:
-            if self.status.running == False:
+            if self.running == False:
                 break
             self.process(station)
-        self.status.close()
+        self.emit(self.stopSig)
         
     def process(self, station):
         self.counter += 1
+        self.emit(self.prgmsgSig, 'Processing Datasets: ({})'.format(self.counter))
         self.updateProgress()
         #get result for one station
         data, result = self.getData(station)
@@ -350,6 +346,6 @@ class TrendMapperProcess(Thread):
 
     def updateProgress(self):
         progress = int(self.counter / float(self.totalCounter) * 100)
-        self.status.ProgressBar(progress)
+        self.emit(self.progSig, progress)
     
 
