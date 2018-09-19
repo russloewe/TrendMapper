@@ -89,7 +89,7 @@ def createVectorLayer(srcLayer, newLayerName, fieldsToCopy):
         if name not in [str(i.name()) for i in newFields]:
             raise AttributeError('Field {} not in new layer'.format(name))
     #create a new point layer
-    vl = QgsVectorLayer("Point?crs=epsg:27700&field=mytext:string(255)&field=mytext2:string(255)", newLayerName, "memory")
+    vl = QgsVectorLayer("Point?crs=epsg:27700", newLayerName, "memory")
     pr = vl.dataProvider()
     #add the subset of fields to the new layer
     checkTrue(vl.startEditing())
