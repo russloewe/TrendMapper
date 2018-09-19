@@ -12,24 +12,18 @@ def calculateLinearRegression(x, y, includeStats=False):
     slope, intercept = linearFitResult[0]
     if includeStats:
         rank = linearFitResult[2]
-        risidualSum = calculateRisidualSum(dataSet,slope , intercept)
+        risidualSum = calculateRisidualSum(zip(x,y) ,slope , intercept)
         results = {'slope' : float(slope), 'intercept': float(intercept),
          'rank' : float(rank), 'risidualSum': float(risidualSum),
-          'setsize' : len(dataSet)}
+          'setsize' : len(x)}
     else:
          results = {'slope' : float(slope), 'intercept': float(intercept)}
     return(results)
 
 def mean(data):
-    x = [] #init independent var array
-    y = [] #init dependent var array
     if len(data) < 1:
         raise ValueError('No data points in dataset') 
-    for data_point in data:
-        x_val,y_val = data_point  #unpack tuple
-        x.append(x_val)
-        y.append(y_val)
-    a = numpy.mean(y)
+    a = numpy.mean(data)
     results = {'mean' : a}
     return(results)
     

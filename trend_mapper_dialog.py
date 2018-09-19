@@ -21,16 +21,16 @@
  ***************************************************************************/
 """
 
-import os
-
-from PyQt4 import QtGui, uic
+import os 
+from PyQt4 import QtGui, uic, QtCore
+from trend_mapper_status import TrendMapperStatus
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'trend_mapper_dialog_base.ui'))
 
 
 class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
-    def __init__(self, parent=None):
+    def __init__(self, iface, parent=None):
         """Constructor."""
         super(TrendMapperDialog, self).__init__(parent)
         # Set up the user interface from Designer.
@@ -39,7 +39,8 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
-        
+        self.iface = iface
+            
     def getInputLayer(self):
         '''return vector layer from combo box for 
         analysis input
@@ -60,43 +61,41 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         return(str(self.xFieldCombo.currentText()))
         
     def getYFieldCombo(self):
+        '''get data column for conversion
+        returns string'''
+        return(str(self.yFieldCombo.currentText()))
+    
+    def getDateFormatCombo(self):
         '''get data column for dependent variable in 
         regresison analysis
         returns string'''
-        return(str(self.yFieldCombo.currentText()))
+        return(str(self.dateFormatCombo.currentText()))
         
-    def getDiscardBadFitOption(self):
-        '''get checkbox status from Discard Bad Fit box.
-        returns boolean'''
-        return(self.discardBadFitCheck.isChecked())
+    def getDateFormatCheckbok(self):
+        '''get status from the date format checkbox'''
+        return(self.dateCheck.isChecked())
         
     def getExportRisidualsOption(self):
         '''returns Export Riduals choice.
             returns boolean'''
         return(self.exportRisidualsCheck.isChecked())
-        
-    def getFilterOutliersOption(self):
-        '''Get choice for filtering outliers check box.
-        returns boolean'''
-        return(self.filterOutliersCheck.isChecked())
-        
-    def getThresholdValue(self):
-        '''Gets the value for threshold input in regression
-        analysis filter option. The number is the multiple of 
-        standard deviations for outlier filter.
-        returns float or int'''
-        value = self.outlierThresholdLine.text()
-        try:
-            num_value = float(value)
-        except ValueError:
-            num_value = None
-        return num_value
+    
+    def getDateFormatText(self):
+        '''gets the name for the output layer from the 
+        outputlayer line edit.
+        returns string'''
+        return(self.dateFormatLineEdit.text())
         
     def getOutputLayerName(self):
         '''gets the name for the output layer from the 
         outputlayer line edit.
         returns string'''
         return(self.outputLayerLine.text())
+    
+    def getCopyAttrSelected(self):
+        '''Get a list of the attributes selected in the copy
+        attr QListWidget'''
+        return [item.text() for item in self.copyAttr.selectedItems()]
         
     def setLayerInputCombo(self, layerList):
         '''Get a list of available layers from 
@@ -113,12 +112,14 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         self.categoryCombo.clear()
         self.xFieldCombo.clear()
         self.yFieldCombo.clear()
+        self.copyAttr.clear()
+        self.dateFormatCombo.clear()
         for item in inputList:
             self.categoryCombo.addItem(item)
             self.xFieldCombo.addItem(item)
             self.yFieldCombo.addItem(item)
-            
-
+            self.copyAttr.addItem(item)
+            self.dateFormatCombo.addItem(item)
          
     def setAttributeComboCallback(self, callback_function):
         '''recieves a function to connect with the
@@ -128,3 +129,33 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
          data.'''
         self.inputLayerCombo.currentIndexChanged.connect(
                                         callback_function)
+    def ProgressBarStatus(self, msg):
+        if self.prgWidget:
+            self.prgWidget.setText(msg)
+            
+    def message(self, message):
+        '''push a message to the status bar'''
+        self.iface.messageBar().pushMessage('Info', message)
+        
+    def setProgressBar(self, main, text, maxVal=100):
+        self.prgWidget = self.iface.messageBar().createMessage(main, text)
+        self.prgBar = QtGui.QProgressBar()
+        self.prgBar.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.prgBar.setValue(0)
+        self.prgBar.setMaximum(maxVal)
+        self.abortButton = QtGui.QPushButton('Abort', self)
+        self.msgText = QtGui.QLabel()
+        self.msgText.setText('')
+        self.prgWidget.layout().addWidget(self.msgText)
+        self.prgWidget.layout().addWidget(self.abortButton)
+        self.prgWidget.layout().addWidget(self.prgBar)
+        self.iface.messageBar().pushWidget(self.prgWidget,
+                                           self.iface.messageBar().INFO)
+                                           
+    def ProgressBar(self, value):
+        if self.prgWidget:
+            self.prgBar.setValue(value)
+            if (value == self.prgBar.maximum()):
+                self.iface.messageBar().clearWidgets()
+                self.iface.mapCanvas().refresh()
+                self.prgWidget = None

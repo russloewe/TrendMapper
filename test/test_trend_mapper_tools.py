@@ -34,26 +34,11 @@ import faulthandler
 faulthandler.enable()
 
 #sys.settrace(trace)
-def filterFun(point):
-    for key in point:
-        if point[key] == NULL:
-            return False
-    return True
 def convFun(point):
     for key in point:
         if type(point[key]) != QgsGeometry:
             point[key] = str(point[key])
     return point
-
-def convFunNum(attr):
-    def fun(point):
-        for key in point:
-            if key in attr:
-                point[key] = float(point[key])
-            elif type(point[key]) != QgsGeometry:
-                point[key] = str(point[key])
-        return point
-    return fun
 
 class ToolsTest(unittest.TestCase):
     """Test dialog works."""
@@ -69,7 +54,7 @@ class ToolsTest(unittest.TestCase):
         self.layer_daily = QgsVectorLayer(
                                     './test/test_noaa_daily.sqlite', 
                                     'test_noaa_daily', 'ogr')
-        
+        QgsMapLayerRegistry.instance().addMapLayer(self.layer_yearly)
         
 
     def tearDown(self):
@@ -303,6 +288,40 @@ class ToolsTest(unittest.TestCase):
             pass
         else:
             self.fail('last call should have raised exception')
+    
+    def test_convertFun(self):
+        '''test the convert function with the date converter'''
+        test = {'x' : '2.0', 'y' : 'test', 'd' : '2018-12-28'}
+        function = convFunNum(['x'])
+        converted = function(test)
+        self.assertEqual(type(converted['x']), float)
+        function = convFunNum(['x'], dateColumn = 'd', dateFormat = '%Y-%m-%d')
+        converted = function(test)
+        self.assertEqual(converted['d'], 737056)
+    
+    def test_makeFeature(self):
+        '''Test the makeFeature function'''
+        featureDict = {'date' : 2014, 'station' : 'new', 'GEOMETRY' : QgsGeometry()}
+        feature = makeFeature(self.layer_yearly, featureDict)
+        self.assertEqual(type(feature), QgsFeature)
+        
+    def test_makeFeature_nogeom(self):
+        '''Test the makeFeature function with no geometry'''
+        featureDict = {}
+        try:
+            makeFeature(self.layer_yearly, featureDict)
+        except KeyError:
+            pass
+        else:
+            self.fail('the last call should have raised KeyError')
+        
+    def test_addResultFields(self):
+        '''Test the addResultFields function'''
+        attr = ['station', 'date', 'longitude']
+        newLayer = createVectorLayer(self.layer_yearly, 'new', attr)
+        result = {'slope' : 3, 'mean' : 4}
+        addResultFields(newLayer, result)
+        self.assertTrue('slope' in [str(i.name()) for i in newLayer.pendingFields()])
         
 if __name__ == "__main__":
     suite = unittest.makeSuite(ToolsTest)

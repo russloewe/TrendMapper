@@ -20,23 +20,24 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QPyNullVariant
-from PyQt4.QtGui import QAction, QIcon
+from qgis.core import QgsMapLayerRegistry
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
 from PyQt4.QtSql import QSqlDatabase
-from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI, QgsFeatureRequest, QgsField, QgsVectorLayer, QgsFeature
-from qgis.PyQt.QtCore import QVariant
+from PyQt4 import QtGui, uic, QtCore
 # Initialize Qt resources from file resources.py
 import resources
 from analysis import calculateLinearRegression
 from trend_mapper_tools import *
 # Import the code for the dialog
 from trend_mapper_dialog import TrendMapperDialog
+from trend_mapper_status import TrendMapperStatus
 import os.path
 #import the custom logger
+from time import sleep
 from trend_mapper_logger import myLogger
-log = myLogger(myLogger.INFO)
-
-import cProfile
+log = myLogger()
+from threading import Thread
 
 class TrendMapper:
     """QGIS Plugin Implementation."""
@@ -79,7 +80,10 @@ class TrendMapper:
             pass
         else:
             self.toolbar.setObjectName(u'TrendMapper')
-
+        self.totalCounter = 1
+        self.counter = 0
+        
+        
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -147,7 +151,7 @@ class TrendMapper:
         """
 
         # Create the dialog (after translation) and keep reference
-        self.dlg = TrendMapperDialog()
+        self.dlg = TrendMapperDialog(self.iface)
 
         icon = QIcon(icon_path)
         action = QAction(icon, text, parent)
@@ -208,12 +212,7 @@ class TrendMapper:
             layer_obj = allLayers[allLayerNames.index(layerName)]
             fields = layer_obj.pendingFields()
             self.dlg.setLayerAttributesCombos([field.name() for field in fields])
-            
-            
-    def message(self, message):
-        '''push a message to the status bar'''
-        self.iface.messageBar().pushMessage('Info', message, level = Qgis.info)
-        
+
     def run(self, test_run=False):
         """Run method that performs all the real work"""
         
@@ -224,72 +223,129 @@ class TrendMapper:
         if not test_run:
             self.dlg.setAttributeComboCallback(self.updateAttributeCombos)
             self.updateAttributeCombos()
-        
-        
         # show the dialog
         self.dlg.show()
         # Run the dialog event loop
-        if test_run:
-            result = True
-        else:
-            result = self.dlg.exec_()
+        result = self.dlg.exec_()
         # See if OK was pressed
-        
         if result:
-            log.debug('runner called')
-            # get all the data from the dialog
-            inputLayerName = self.dlg.getInputLayer()
-            keyCol = self.dlg.getCategoryCombo()
-            xField = self.dlg.getXFieldCombo()
-            yField = self.dlg.getYFieldCombo()
-            outputLayerName = self.dlg.getOutputLayerName()
-            #need to add copy attributes
-            log.debug('''Trendmapper runner params:
-                        inputLayerName: {}
-                        keyCol: {}
-                        xField: {}
-                        yField: {}
-                        outputLayerName: {}'''.format(
-                        inputLayerName, keyCol, xField,
-                        yField, outputLayerName))
+            self.process()
             
-            #grab a reference to the input layer
-            layer = getLayerByName(inputLayerName)
-            dataAttr = [xField, yField]
-            copyAttr = [keyCol] #need to add way to get more from user
-            stations = getUniqueKeys(layer, keyCol) #get the list of stations to process
+    def stp(self):
+        QgsMapLayerRegistry.instance().addMapLayer(self.newLayer)
+        
+    def process(self):
+        # get all the data from the dialog
+        inputLayerName = self.dlg.getInputLayer()
+        keyCol = self.dlg.getCategoryCombo()
+        xField = self.dlg.getXFieldCombo()
+        yField = self.dlg.getYFieldCombo()
+        outputLayerName = self.dlg.getOutputLayerName()
+        copyAttr = self.dlg.getCopyAttrSelected()
+        statsCheck = self.dlg.getExportRisidualsOption()
+        formatDateCol = self.dlg.getDateFormatCheckbok()
+        dateCol = self.dlg.getDateFormatCombo()
+        dateFormat = self.dlg.getDateFormatText()
+        
+        #start progressbar 
+        self.dlg.setProgressBar('TrendMapper', '')
+        
+        #set up the rest of the paramters for the worker
+        layer = getLayerByName(inputLayerName)
+        copyAttr.append(keyCol) 
+        self.dlg.ProgressBarStatus('Finding unique entries in {}'.format(keyCol))
+        stations = getUniqueKeys(layer, keyCol) 
+        #create the new layer
+        self.newLayer = createVectorLayer(layer, outputLayerName, copyAttr)
+        #set up the worker thread
+        tmprocess = TrendMapperProcess(self.newLayer, stations, xField, yField, 
+                                copyAttr)
+        tmprocess.createConvFunction(formatDateCol, dateCol, dateFormat)
+        tmprocess.createDataFunction(layer, keyCol, statsCheck)
+        self.dlg.connect(tmprocess, tmprocess.progSig, self.dlg.ProgressBar)
+        self.dlg.connect(tmprocess, tmprocess.stopSig, self.stp)
+        self.dlg.connect(tmprocess, tmprocess.msgSig, self.dlg.message)
+        self.dlg.connect(tmprocess, tmprocess.prgmsgSig, self.dlg.ProgressBarStatus)
+        self.dlg.abortButton.clicked.connect(tmprocess.abort)
+        tmprocess.start()   
+        
+class TrendMapperProcess(QThread):
+    def __init__(self, newLayer, stations, xField, yField, copyAttr):
+        super(TrendMapperProcess, self).__init__()
+        self.counter = 0
+        self.totalCounter = len(stations)
+        self.stations = stations
+        self.copyAttr = copyAttr
+        self.dataAttr = [xField, yField]
+        self.xField = xField
+        self.yField = yField
+        self.newLayer = newLayer
+        self.running = True
+        self.stopSig = QtCore.SIGNAL("stopSignal")
+        self.progSig = QtCore.SIGNAL("progress")
+        self.msgSig = QtCore.SIGNAL ("msgSignal")
+        self.prgmsgSig = QtCore.SIGNAL ("prgmsgSignal")
             
-            #create a function create a result feature for each station set
-            def getdata(station):
-                featureItr = featureGenerator(layer, station, keyCol)
-                pointItr = datapointGenerator(featureItr, copyAttr + dataAttr)
-                filterItr = filterDatapointGenerator(pointItr, filterFun)
-                convItr = convertedDatapointGenerator(filterItr, 
-                                           convFunNum(dataAttr),
-                                           skipOnErr = True)
-                data = organizeData(convItr, dataAttr)
-                log.info('data: {}'.format(data))
-                if (len(data[xField]) < 1) or (len(data[yField]) < 1):
+    def abort(self):
+        self.emit(self.progSig, 100)
+        self.emit(self.msgSig, 'Abort Called')
+        self.running = False
+            
+    def createConvFunction(self, formatDateCol, dateCol, dateForm):
+        if formatDateCol:
+            convFunction = convFunNum(self.dataAttr, dateColumn = dateCol,
+                                            dateFormat = dateForm)
+        else:
+            convFunction = convFunNum(self.dataAttr)
+        self.convFunction = convFunction
+        
+    def createDataFunction(self, layer, keyCol, statsCheck):
+        def getdata(station):
+            featureItr = featureGenerator(layer, station, keyCol)
+            pointItr = datapointGenerator(featureItr, self.copyAttr + self.dataAttr)
+            filterItr = filterDatapointGenerator(pointItr, filterFun)
+            convItr = convertedDatapointGenerator(filterItr, 
+                                       self.convFunction,
+                                       skipOnErr = True)
+            data = organizeData(convItr, self.dataAttr)
+            for key in self.dataAttr:
+                if (len(data[self.xField]) < 1) or (len(data[self.yField]) < 1):
                     return data, None
-                else:
-                    result = calculateLinearRegression(data[xField], 
-                                                data[yField])
-                    return data, result
-            #create the result layer
-            newLayer = createVectorLayer(layer, "new", copyAttr)
-            firstRun = True
-            for station in stations:
-                #get result for one station
-                data, result = getdata(station)
-                if result == None:
-                    continue
-                if firstRun:
-                    #add the add the result attributes as fields in new layer
-                    addResultFields(newLayer, result)
-                    firstRun = False
-                mergeResult = mergeDicts(data, result, excluded = dataAttr)
-                newFeature = makeFeature(newLayer, mergeResult)
-                checkTrue(newLayer.startEditing())
-                newLayer.addFeatures([newFeature], makeSelected = False)
-                checkTrue(newLayer.commitChanges())
-            QgsMapLayerRegistry.instance().addMapLayer(newLayer)
+            result = calculateLinearRegression(data[self.xField], 
+                                        data[self.yField],
+                                    includeStats = statsCheck)
+            return data, result
+        self.getData = getdata
+        
+    def run(self):
+        newFeatures = []
+        self.firstRun = True
+        for station in self.stations:
+            if self.running == False:
+                break
+            self.process(station)
+        self.emit(self.stopSig)
+        
+    def process(self, station):
+        self.counter += 1
+        self.emit(self.prgmsgSig, 'Processing Datasets: ({})'.format(self.counter))
+        self.updateProgress()
+        #get result for one station
+        data, result = self.getData(station)
+        if result == None:
+            return
+        if self.firstRun:
+            #add the add the result attributes as fields in new layer
+            addResultFields(self.newLayer, result)
+            firstRun = False
+        mergeResult = mergeDicts(data, result, excluded = self.dataAttr)
+        newFeature = makeFeature(self.newLayer, mergeResult)
+        checkTrue(self.newLayer.startEditing())
+        self.newLayer.addFeatures([newFeature], makeSelected = False)
+        checkTrue(self.newLayer.commitChanges())
+
+    def updateProgress(self):
+        progress = int(self.counter / float(self.totalCounter) * 100)
+        self.emit(self.progSig, progress)
+    
+
