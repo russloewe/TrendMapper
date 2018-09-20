@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # /***************************************************************************
- # TrendMapperDialog
+ # TrendMapperAnalysis
                                  # A QGIS plugin
  # calculate trendlines along catagories
                              # -------------------
