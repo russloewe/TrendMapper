@@ -53,10 +53,7 @@ class TrendMapperTest(unittest.TestCase):
         
         #set the category combo to the name field
         self.trendmapper.dlg.getCategoryCombo = lambda : 'station'
-        
-            
-        
-        
+           
 
     def tearDown(self):
         """Runs after each test."""
@@ -64,11 +61,11 @@ class TrendMapperTest(unittest.TestCase):
         self.trendmapper = None
 
     
-    def _test_dialoge(self):
+    def test_dialoge(self):
         '''Test that the dialoge box loaded'''
         self.assertTrue(self.trendmapper.dlg is not None)
 
-    def _test_run_(self):
+    def test_run_(self):
         '''Test that the run function works for int and float'''
         #set the xField combo
         self.trendmapper.dlg.getXFieldCombo = lambda : 'date'
