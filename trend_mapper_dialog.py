@@ -130,7 +130,7 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         self.inputLayerCombo.currentIndexChanged.connect(
                                         callback_function)
     def ProgressBarStatus(self, msg):
-        if self.prgWidget:
+        if self.prgWidget.isVisible():
             self.prgWidget.setText(msg)
             
     def message(self, message):
@@ -153,7 +153,7 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
                                            self.iface.messageBar().INFO)
                                            
     def ProgressBar(self, value):
-        if self.prgWidget:
+        if self.prgWidget.isVisible():
             self.prgBar.setValue(value)
             if (value == self.prgBar.maximum()):
                 self.iface.messageBar().clearWidgets()
