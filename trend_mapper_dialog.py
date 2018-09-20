@@ -115,14 +115,19 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
             self.copyAttr.addItem(item)
             self.dateFormatCombo.addItem(item)
          
-    def setAttributeComboCallback(self, callback_function):
-        '''recieves a function to connect with the
-         InputLayerCombo.currentIndexChanged connection. I'm
-         doing this so that all iface stuff can be located in the
-         main python file so that this class only has to pass and recieve
-         data.'''
-        self.inputLayerCombo.currentIndexChanged.connect(
-                                        callback_function)
+    def updateAttributeCombos(self):
+        '''this is the callback function that gets called by the 
+        dialoge class when it needs the attribute data for a layer 
+        when the combo index is changed. This function is here and 
+        not in the dialog class so that the dialog class doesn't 
+        depend on the qgis interface.'''
+        layerName = self.getInputLayer()
+        if len(layerName) > 0:
+            allLayers = self.iface.legendInterface().layers()
+            allLayerNames = [lyr.name() for lyr in allLayers]
+            layer_obj = allLayers[allLayerNames.index(layerName)]
+            fields = layer_obj.pendingFields()
+            self.setLayerAttributesCombos([field.name() for field in fields])
             
     def message(self, message):
         '''push a message to the status bar'''
