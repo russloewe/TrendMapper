@@ -20,19 +20,17 @@
  *                                                                         *
  ***************************************************************************/
 """
+import os.path
 from qgis.core import QgsMapLayerRegistry
-from PyQt4.QtGui import *
 from PyQt4 import QtGui, uic, QtCore
 # Initialize Qt resources from file resources.py
 import resources
+#import TrendMapper resources
 from analysis import calculateLinearRegression
-from trend_mapper_tools import *
-# Import the code for the dialog
 from trend_mapper_dialog import TrendMapperDialog
 from trend_mapper_process import TrendMapperProcess
-import os.path
-#import the custom logger
 from trend_mapper_logger import myLogger
+#set the logger
 log = myLogger()
 
 
@@ -52,7 +50,7 @@ class TrendMapper:
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
         # initialize locale
-        loc = QSettings().value('locale/userLocale','en')
+        loc = QtCore.QSettings().value('locale/userLocale','en')
         locale = loc[0:2]
 
         locale_path = os.path.join(
@@ -94,7 +92,7 @@ class TrendMapper:
         :rtype: QString
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
-        return QCoreApplication.translate('TrendMapper', message)
+        return QtCore.QCoreApplication.translate('TrendMapper', message)
 
 
     def add_action(
@@ -150,8 +148,8 @@ class TrendMapper:
         # Create the dialog (after translation) and keep reference
         self.dlg = TrendMapperDialog(self.iface)
 
-        icon = QIcon(icon_path)
-        action = QAction(icon, text, parent)
+        icon = QtGui.QIcon(icon_path)
+        action = QtGui.QAction(icon, text, parent)
         action.triggered.connect(callback)
         action.setEnabled(enabled_flag)
 
@@ -223,7 +221,10 @@ class TrendMapper:
         # show the dialog
         self.dlg.show()
         # Run the dialog event loop
-        result = self.dlg.exec_()
+        if test_run == True:
+            result = True
+        else:
+            result = self.dlg.exec_()
         # See if OK was pressed
         if result:
             self.process()
