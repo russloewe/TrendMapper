@@ -34,6 +34,8 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         super(TrendMapperDialog, self).__init__(parent)
         self.setupUi(self)
         self.iface = iface
+        self.inputLayerCombo.currentIndexChanged.connect(
+                                                   self.updateAttributeCombos)
             
     def getInputLayer(self):
         '''return vector layer from combo box for 
