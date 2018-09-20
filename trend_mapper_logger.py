@@ -1,6 +1,6 @@
 from qgis.core import QgsMessageLog
 
-class myLogger():
+class TrendMapperLogger():
     DEBUG = 0 
     INFO = 1
     ERROR = 2

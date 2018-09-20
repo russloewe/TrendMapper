@@ -28,8 +28,8 @@ from qgis.PyQt.QtCore import QVariant, QPyNullVariant
 from datetime import datetime
 # Initialize Qt resources from file resources.py
 import os.path
-from trend_mapper_logger import myLogger
-log = myLogger()
+from trend_mapper_logger import TrendMapperLogger
+log = TrendMapperLogger()
 
 
 

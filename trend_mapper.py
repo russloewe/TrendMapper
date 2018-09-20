@@ -29,10 +29,10 @@ import resources
 from analysis import calculateLinearRegression
 from trend_mapper_dialog import TrendMapperDialog
 from trend_mapper_process import TrendMapperProcess
-from trend_mapper_logger import myLogger
+from trend_mapper_logger import TrendMapperLogger
 from trend_mapper_tools import getLayerByName, getUniqueKeys, createVectorLayer
 # Set the logger
-log = myLogger()
+log = TrendMapperLogger()
 
 
 class TrendMapper:
