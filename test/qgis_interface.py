@@ -213,3 +213,8 @@ class QgisInterface(QObject):
     
     def messageBar(self):
         return dummy()
+
+class dummy():
+    '''Dummy class so test can call iface.messageBar().createMessage()'''
+    def createMessage(self, *args):
+        pass
