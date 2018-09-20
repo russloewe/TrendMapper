@@ -288,9 +288,10 @@ class TrendMapperProcess(QThread):
 
             
     def abort(self):
+        self.running = False
         self.emit(self.abortSig)
         self.emit(self.msgSig, 'Abort Called')
-        self.running = False
+        
             
     def createConvFunction(self, formatDateCol, dateCol, dateForm):
         if formatDateCol:

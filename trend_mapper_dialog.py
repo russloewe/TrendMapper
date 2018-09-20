@@ -142,7 +142,7 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         self.prgBar.setValue(0)
         self.prgBar.setMaximum(maxVal)
         self.abortButton = QtGui.QPushButton('Abort', self)
-        self.abortButton.clicked.connect(self.ProgressBarClose)
+        #self.abortButton.clicked.connect(self.ProgressBarClose)
         self.msgText = QtGui.QLabel()
         self.msgText.setText('')
         self.prgWidget.layout().addWidget(self.msgText)
@@ -152,15 +152,17 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
                                            self.iface.messageBar().INFO)
                                            
     def ProgressBar(self, value, msg):
-        if (value >= self.prgBar.maximum()):
-            self.prgrunning = False
-            self.iface.messageBar().clearWidgets()
-            self.iface.mapCanvas().refresh()
         if self.prgrunning:
-            self.prgBar.setValue(value)
-            self.msgText.setText(msg)
+            if (value >= self.prgBar.maximum()):
+                self.ProgressBarClose()
+            else:
+                self.prgBar.setValue(value)
+                #self.msgText.setText(msg)
+                self.prgWidget.setText(msg)
+            
+                
             
     def ProgressBarClose(self):
         self.prgrunning = False
-        #self.iface.messageBar().clearWidgets()
-        #self.iface.mapCanvas().refresh()
+        self.iface.messageBar().clearWidgets()
+        self.iface.mapCanvas().refresh()
