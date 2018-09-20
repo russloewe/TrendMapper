@@ -25,13 +25,13 @@ from qgis.core import QgsMapLayerRegistry
 from PyQt4 import QtGui, uic, QtCore
 # Initialize Qt resources from file resources.py
 import resources
-#import TrendMapper resources
+# Import TrendMapper resources
 from analysis import calculateLinearRegression
 from trend_mapper_dialog import TrendMapperDialog
 from trend_mapper_process import TrendMapperProcess
 from trend_mapper_logger import myLogger
 from trend_mapper_tools import getLayerByName, getUniqueKeys, createVectorLayer
-#set the logger
+# Set the logger
 log = myLogger()
 
 
@@ -51,7 +51,7 @@ class TrendMapper:
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
         # initialize locale
-        loc = QtCore.QSettings().value('locale/userLocale','en')
+        loc = QtCore.QSettings().value('locale/userLocale', 'en')
         locale = loc[0:2]
 
         locale_path = os.path.join(
@@ -66,20 +66,18 @@ class TrendMapper:
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
-
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&TrendMapper')
         # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'TrendMapper')
-        if self.toolbar == None:
+        if self.toolbar is None:
             pass
         else:
             self.toolbar.setObjectName(u'TrendMapper')
         self.totalCounter = 1
         self.counter = 0
-        
-        
+
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -94,7 +92,6 @@ class TrendMapper:
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QtCore.QCoreApplication.translate('TrendMapper', message)
-
 
     def add_action(
         self,
@@ -191,19 +188,19 @@ class TrendMapper:
             self.iface.removeToolBarIcon(action)
         # remove the toolbar
         del self.toolbar
-        
+
     def stp(self):
-        '''Add the new layer to the canvas when the processing 
+        '''Add the new layer to the canvas when the processing
         thread signals it's done
         '''
         QgsMapLayerRegistry.instance().addMapLayer(self.newLayer)
-        
+
     def run(self, test_run=False):
         """Run method when TrendMapper in launched.
-        Sets up and shows dialog and launches TrendMapper.process() 
+        Sets up and shows dialog and launches TrendMapper.process()
         """
-        
-        #Give the dialoge the list of layers
+
+        # Give the dialoge the list of layers
         layers = self.iface.legendInterface().layers()
         allLayers = [layer for layer in layers if layer.type() == 0]
         self.dlg.setLayerInputCombo([layer.name() for layer in allLayers])
@@ -218,10 +215,10 @@ class TrendMapper:
         # See if OK was pressed
         if result:
             self.process()
-            
+
     def process(self):
         '''This is where a lot of the work is done. All the values
-        from the dialog are retrieved, then the TrendMapperProcess 
+        from the dialog are retrieved, then the TrendMapperProcess
         worker thread and the progress bar are set up, connected
         and then launched'''
         # get all the data from the dialog
@@ -235,30 +232,29 @@ class TrendMapper:
         formatDateCol = self.dlg.getDateFormatCheckbok()
         dateCol = self.dlg.getDateFormatCombo()
         dateFormat = self.dlg.getDateFormatText()
-        #start progressbar 
+        # start progressbar
         self.dlg.setProgressBar('TrendMapper', '')
-        #set up the rest of the paramters for the worker thread
+        # set up the rest of the paramters for the worker thread
         layer = getLayerByName(inputLayerName)
-        copyAttr.append(keyCol) 
-        self.dlg.ProgressBar(0, 
+        copyAttr.append(keyCol)
+        self.dlg.ProgressBar(0,
                          'Finding unique entries in {}'.format(keyCol))
-        stations = getUniqueKeys(layer, keyCol) 
-        #create the new layer
-        self.newLayer = createVectorLayer(layer, outputLayerName, 
+        stations = getUniqueKeys(layer, keyCol)
+        # create the new layer
+        self.newLayer = createVectorLayer(layer, outputLayerName,
                                           copyAttr)
-        #set up the worker thread
-        tmprocess = TrendMapperProcess(self.newLayer, stations, xField, 
+        # set up the worker thread
+        tmprocess = TrendMapperProcess(self.newLayer, stations, xField,
                                        yField, copyAttr)
         tmprocess.createConvFunction(formatDateCol, dateCol, dateFormat)
         tmprocess.createDataFunction(layer, keyCol, statsCheck)
-        #set up thread signal slots
-        self.dlg.connect(tmprocess, tmprocess.progSig, 
+        # set up thread signal slots
+        self.dlg.connect(tmprocess, tmprocess.progSig,
                          self.dlg.ProgressBar)
         self.dlg.connect(tmprocess, tmprocess.stopSig, self.stp)
         self.dlg.connect(tmprocess, tmprocess.msgSig, self.dlg.message)
-        self.dlg.connect(tmprocess, tmprocess.abortSig, 
+        self.dlg.connect(tmprocess, tmprocess.abortSig,
                          self.dlg.ProgressBarClose)
         self.dlg.abortButton.clicked.connect(tmprocess.abort)
-        #start the worker thread
-        tmprocess.start()   
-        
+        # start the worker thread
+        tmprocess.start()
