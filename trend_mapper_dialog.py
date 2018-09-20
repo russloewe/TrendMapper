@@ -23,7 +23,6 @@
 
 import os 
 from PyQt4 import QtGui, uic, QtCore
-from trend_mapper_status import TrendMapperStatus
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'trend_mapper_dialog_base.ui'))
