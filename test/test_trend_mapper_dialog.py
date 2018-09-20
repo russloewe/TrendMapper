@@ -13,7 +13,7 @@ __date__ = '2018-07-28'
 __copyright__ = 'Copyright 2018, Russell Loewe'
 
 import unittest
-
+from qgis.core import *
 from PyQt4.QtGui import QDialogButtonBox, QDialog
 from test.utilities import get_qgis_app
 from trend_mapper_dialog import TrendMapperDialog
@@ -27,13 +27,23 @@ class TrendMapperDialogTest(unittest.TestCase):
 
     def setUp(self):
         """Runs before each test."""
-        self.dialog = TrendMapperDialog(None)
         QGIS_APP, CANVAS, IFACE, PARENT = get_qgis_app()
         self.iface = IFACE
-
+        self.dialog = TrendMapperDialog(self.iface)
+        self.layer_yearly = QgsVectorLayer(
+                                    './test/test_noaa_yearly.sqlite', 
+                                    'test_noaa_yearly', 'ogr')
+        self.layer_monthly = QgsVectorLayer(
+                                    './test/test_noaa_monthly.sqlite',
+                                     'test_noaa_monthly', 'ogr')
+        QgsMapLayerRegistry.instance().addMapLayer(self.layer_yearly)
+        QgsMapLayerRegistry.instance().addMapLayer(self.layer_monthly)
+        
     def tearDown(self):
         """Runs after each test."""
         self.dialog = None
+        self.layer_yearl = None
+        self.layer_monthly = None
 
     def test_dialog_ok(self):
         """Test we can click OK."""
@@ -69,25 +79,24 @@ class TrendMapperDialogTest(unittest.TestCase):
     def test_setLayerInputCombo(self):
         '''same test as the attribute combo test but for the layer
         input combo'''
-        testList = ['one', 'two', 'three']
+        testList = ['test_noaa_yearly', 'test_noaa_monthly']
         self.dialog.setLayerInputCombo(testList)
-        for n in range(3):
+        for n in range(2):
             self.assertEqual(self.dialog.inputLayerCombo.findText(testList[n]) >= 0, True)
-        testList2 = ['four', 'five', 'six']
-        self.dialog.setLayerInputCombo(testList2)
-        for n in range(3):
-            self.assertEqual(self.dialog.inputLayerCombo.findText(testList[n]) < 0, True)
+        #testList2 = ['test_noaa_yearly', 'five', 'six']
+        #self.dialog.setLayerInputCombo(testList2)
+       # for n in range(3):
+         #   self.assertEqual(self.dialog.inputLayerCombo.findText(testList[n]) < 0, True)
 
     def test_getInputCombo(self):
         '''test that the right layer is returned for the getInputLayer '''
-        testList = ['one', 'two', 'three']
+        testList = ['test_noaa_yearly', 'test_noaa_monthly']
         self.dialog.setLayerInputCombo(testList)
         self.dialog.inputLayerCombo.setCurrentIndex(0) 
-        self.assertEqual(self.dialog.getInputLayer(), 'one')
+        self.assertEqual(self.dialog.getInputLayer(), 'test_noaa_yearly')
         self.dialog.inputLayerCombo.setCurrentIndex(1) 
-        self.assertEqual(self.dialog.getInputLayer(), 'two')
-        self.dialog.inputLayerCombo.setCurrentIndex(2) 
-        self.assertEqual(self.dialog.getInputLayer(), 'three')
+        self.assertEqual(self.dialog.getInputLayer(), 'test_noaa_monthly')
+
         
     def test_checkboxGetters(self):
         '''test all of the checkbox getter functions'''
@@ -118,7 +127,16 @@ class TrendMapperDialogTest(unittest.TestCase):
         self.assertEqual(self.dialog.getYFieldCombo(), 'three')
         self.assertEqual(self.dialog.getDateFormatCombo(), 'four')
         
-
+    def test_Callback(self):
+        '''test connection index change and updateAttributeCombo'''
+        self.dialog.setLayerInputCombo(['test_noaa_monthly',
+                                        'test_noaa_yearly'])
+        self.dialog.inputLayerCombo.setCurrentIndex(0)
+        result1 = self.dialog.categoryCombo.count()
+        self.dialog.inputLayerCombo.setCurrentIndex(1)
+        result2 = self.dialog.categoryCombo.count()
+        self.assertEqual(result1, 9)
+        self.assertEqual(result2, 10)
     
 
 if __name__ == "__main__":

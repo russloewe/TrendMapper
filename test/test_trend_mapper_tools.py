@@ -59,6 +59,9 @@ class ToolsTest(unittest.TestCase):
 
     def tearDown(self):
         """Runs after each test."""
+        self.layer_yearl = None
+        self.layer_monthly = None
+        self.layer_dialy = None
 
     def test_getUniqueValues(self):
         '''Test getUniqueValues'''
