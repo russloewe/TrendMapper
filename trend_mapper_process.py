@@ -1,3 +1,26 @@
+# -*- coding: utf-8 -*-
+"""
+/***************************************************************************
+ TrendMapperDialog
+                                 A QGIS plugin
+ calculate trendlines along catagories
+                             -------------------
+        begin                : 2018-07-28
+        git sha              : $Format:%H$
+        copyright            : (C) 2018 by Russell Loewe
+        email                : russloewe@gmai.com
+ ***************************************************************************/
+
+/***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
+"""
+
 from qgis.core import QgsMapLayerRegistry
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -5,6 +28,7 @@ from PyQt4.QtSql import QSqlDatabase
 from PyQt4 import QtGui, uic, QtCore
 from analysis import calculateLinearRegression #this needs to be param
 from trend_mapper_tools import *
+
 class TrendMapperProcess(QThread):
     def __init__(self, newLayer, stations, xField, yField, copyAttr):
         super(TrendMapperProcess, self).__init__()

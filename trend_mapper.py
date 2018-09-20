@@ -21,9 +21,7 @@
  ***************************************************************************/
 """
 from qgis.core import QgsMapLayerRegistry
-from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-from PyQt4.QtSql import QSqlDatabase
 from PyQt4 import QtGui, uic, QtCore
 # Initialize Qt resources from file resources.py
 import resources
@@ -34,10 +32,9 @@ from trend_mapper_dialog import TrendMapperDialog
 from trend_mapper_process import TrendMapperProcess
 import os.path
 #import the custom logger
-from time import sleep
 from trend_mapper_logger import myLogger
 log = myLogger()
-from threading import Thread
+
 
 class TrendMapper:
     """QGIS Plugin Implementation."""

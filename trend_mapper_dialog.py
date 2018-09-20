@@ -33,11 +33,6 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
     def __init__(self, iface, parent=None):
         """Constructor."""
         super(TrendMapperDialog, self).__init__(parent)
-        # Set up the user interface from Designer.
-        # After setupUI you can access any designer object by doing
-        # self.<objectname>, and you can use autoconnect slots - see
-        # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
-        # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
         self.iface = iface
             
@@ -135,6 +130,10 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         self.iface.messageBar().pushMessage('Info', message)
         
     def setProgressBar(self, main, text, maxVal=100):
+        '''Create a message bar widget, add a progress bar and abort
+        button. Add the widget to the message bar and hide the X, exit
+        button.
+        '''
         self.prgrunning = True
         self.prgWidget = self.iface.messageBar().createMessage(main, text)
         self.prgBar = QtGui.QProgressBar()
@@ -142,9 +141,6 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         self.prgBar.setValue(0)
         self.prgBar.setMaximum(maxVal)
         self.abortButton = QtGui.QPushButton('Abort', self)
-        self.msgText = QtGui.QLabel()
-        self.msgText.setText('')
-        self.prgWidget.layout().addWidget(self.msgText)
         self.prgWidget.layout().addWidget(self.abortButton)
         self.prgWidget.layout().addWidget(self.prgBar)
         self.iface.messageBar().pushWidget(self.prgWidget,
@@ -152,15 +148,16 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         self.iface.messageBar().findChildren(QtGui.QToolButton)[0].setHidden(True)
                                            
     def ProgressBar(self, value, msg):
+        '''Update the progressbar. Takes a number and a message'''
         if self.prgrunning:
             if (value >= self.prgBar.maximum()):
                 self.ProgressBarClose()
             else:
                 self.prgBar.setValue(value)
-                #self.msgText.setText(msg)
                 self.prgWidget.setText(msg)
 
     def ProgressBarClose(self):
+        '''This method closes the progress bar widget'''
         self.prgrunning = False
         self.iface.messageBar().findChildren(QtGui.QToolButton)[0].setHidden(False)
         self.iface.messageBar().clearWidgets()
