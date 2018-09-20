@@ -162,5 +162,6 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
 
     def ProgressBarClose(self):
         self.prgrunning = False
+        self.iface.messageBar().findChildren(QtGui.QToolButton)[0].setHidden(False)
         self.iface.messageBar().clearWidgets()
         self.iface.mapCanvas().refresh()
