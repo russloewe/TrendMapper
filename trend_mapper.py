@@ -192,38 +192,20 @@ class TrendMapper:
         # remove the toolbar
         del self.toolbar
 
-    def updateAttributeCombos(self):
-        '''this is the callback function that gets called by the 
-        dialoge class when it needs the attribute data for a layer 
-        when the combo index is changed. This function is here and 
-        not in the dialog class so that the dialog class doesn't 
-        depend on the qgis interface.'''
-        
-        #grab the selected layer from the dialog class
-        layerName = self.dlg.getInputLayer()
-        if len(layerName) > 0:
-            allLayers = self.iface.legendInterface().layers()
-            allLayerNames = [lyr.name() for lyr in allLayers]
-            layer_obj = allLayers[allLayerNames.index(layerName)]
-            fields = layer_obj.pendingFields()
-            self.dlg.setLayerAttributesCombos([field.name() for field in fields])
-
     def run(self, test_run=False):
         """Run method that performs all the real work"""
         
+        #Give the dialoge the list of layers
         layers = self.iface.legendInterface().layers()
         allLayers = [layer for layer in layers if layer.type() == 0]
         self.dlg.setLayerInputCombo([layer.name() for layer in allLayers])
-       #pass the callback function for updating combos
-        if not test_run:
-            self.dlg.setAttributeComboCallback(self.updateAttributeCombos)
-            self.updateAttributeCombos()
-        # show the dialog
-        self.dlg.show()
-        # Run the dialog event loop
-        if test_run == True:
+        self.dlg.updateAttributeCombos()
+        if test_run:
             result = True
         else:
+            # show the dialog
+            self.dlg.show()
+            # Run the dialog event loop
             result = self.dlg.exec_()
         # See if OK was pressed
         if result:
