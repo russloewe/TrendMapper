@@ -253,7 +253,7 @@ class TrendMapper:
         #set up the rest of the paramters for the worker
         layer = getLayerByName(inputLayerName)
         copyAttr.append(keyCol) 
-        self.dlg.ProgressBarStatus('Finding unique entries in {}'.format(keyCol))
+        self.dlg.ProgressBar(0, 'Finding unique entries in {}'.format(keyCol))
         stations = getUniqueKeys(layer, keyCol) 
         #create the new layer
         self.newLayer = createVectorLayer(layer, outputLayerName, copyAttr)
@@ -265,7 +265,7 @@ class TrendMapper:
         self.dlg.connect(tmprocess, tmprocess.progSig, self.dlg.ProgressBar)
         self.dlg.connect(tmprocess, tmprocess.stopSig, self.stp)
         self.dlg.connect(tmprocess, tmprocess.msgSig, self.dlg.message)
-        self.dlg.connect(tmprocess, tmprocess.prgmsgSig, self.dlg.ProgressBarStatus)
+        self.dlg.connect(tmprocess, tmprocess.abortSig, self.dlg.ProgressBarClose)
         self.dlg.abortButton.clicked.connect(tmprocess.abort)
         tmprocess.start()   
         
@@ -284,10 +284,11 @@ class TrendMapperProcess(QThread):
         self.stopSig = QtCore.SIGNAL("stopSignal")
         self.progSig = QtCore.SIGNAL("progress")
         self.msgSig = QtCore.SIGNAL ("msgSignal")
-        self.prgmsgSig = QtCore.SIGNAL ("prgmsgSignal")
+        self.abortSig = QtCore.SIGNAL('abortSignal')
+
             
     def abort(self):
-        self.emit(self.progSig, 100)
+        self.emit(self.abortSig)
         self.emit(self.msgSig, 'Abort Called')
         self.running = False
             
@@ -323,13 +324,13 @@ class TrendMapperProcess(QThread):
         for station in self.stations:
             if self.running == False:
                 break
-            self.process(station)
+            else:
+                self.process(station)
         self.emit(self.stopSig)
         
     def process(self, station):
         self.counter += 1
-        self.emit(self.prgmsgSig, 'Processing Datasets: ({})'.format(self.counter))
-        self.updateProgress()
+        self.updateProgress('Processing Datasets: ({})'.format(self.counter))
         #get result for one station
         data, result = self.getData(station)
         if result == None:
@@ -344,8 +345,8 @@ class TrendMapperProcess(QThread):
         self.newLayer.addFeatures([newFeature], makeSelected = False)
         checkTrue(self.newLayer.commitChanges())
 
-    def updateProgress(self):
+    def updateProgress(self, msg):
         progress = int(self.counter / float(self.totalCounter) * 100)
-        self.emit(self.progSig, progress)
+        self.emit(self.progSig, progress, msg)
     
 

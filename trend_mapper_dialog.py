@@ -129,21 +129,20 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
          data.'''
         self.inputLayerCombo.currentIndexChanged.connect(
                                         callback_function)
-    def ProgressBarStatus(self, msg):
-        if self.prgWidget.isVisible():
-            self.prgWidget.setText(msg)
             
     def message(self, message):
         '''push a message to the status bar'''
         self.iface.messageBar().pushMessage('Info', message)
         
     def setProgressBar(self, main, text, maxVal=100):
+        self.prgrunning = True
         self.prgWidget = self.iface.messageBar().createMessage(main, text)
         self.prgBar = QtGui.QProgressBar()
         self.prgBar.setAlignment(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
         self.prgBar.setValue(0)
         self.prgBar.setMaximum(maxVal)
         self.abortButton = QtGui.QPushButton('Abort', self)
+        self.abortButton.clicked.connect(self.ProgressBarClose)
         self.msgText = QtGui.QLabel()
         self.msgText.setText('')
         self.prgWidget.layout().addWidget(self.msgText)
@@ -152,10 +151,16 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
         self.iface.messageBar().pushWidget(self.prgWidget,
                                            self.iface.messageBar().INFO)
                                            
-    def ProgressBar(self, value):
-        if self.prgWidget.isVisible():
+    def ProgressBar(self, value, msg):
+        if (value >= self.prgBar.maximum()):
+            self.prgrunning = False
+            self.iface.messageBar().clearWidgets()
+            self.iface.mapCanvas().refresh()
+        if self.prgrunning:
             self.prgBar.setValue(value)
-            if (value == self.prgBar.maximum()):
-                self.iface.messageBar().clearWidgets()
-                self.iface.mapCanvas().refresh()
-                self.prgWidget = None
+            self.msgText.setText(msg)
+            
+    def ProgressBarClose(self):
+        self.prgrunning = False
+        #self.iface.messageBar().clearWidgets()
+        #self.iface.mapCanvas().refresh()
