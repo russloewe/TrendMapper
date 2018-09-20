@@ -30,6 +30,7 @@ from analysis import calculateLinearRegression
 from trend_mapper_dialog import TrendMapperDialog
 from trend_mapper_process import TrendMapperProcess
 from trend_mapper_logger import myLogger
+from trend_mapper_tools import getLayerByName, getUniqueKeys, createVectorLayer
 #set the logger
 log = myLogger()
 
@@ -181,7 +182,6 @@ class TrendMapper:
             callback=self.run,
             parent=self.iface.mainWindow())
 
-
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
@@ -191,9 +191,17 @@ class TrendMapper:
             self.iface.removeToolBarIcon(action)
         # remove the toolbar
         del self.toolbar
-
+        
+    def stp(self):
+        '''Add the new layer to the canvas when the processing 
+        thread signals it's done
+        '''
+        QgsMapLayerRegistry.instance().addMapLayer(self.newLayer)
+        
     def run(self, test_run=False):
-        """Run method that performs all the real work"""
+        """Run method when TrendMapper in launched.
+        Sets up and shows dialog and launches TrendMapper.process() 
+        """
         
         #Give the dialoge the list of layers
         layers = self.iface.legendInterface().layers()
@@ -211,10 +219,11 @@ class TrendMapper:
         if result:
             self.process()
             
-    def stp(self):
-        QgsMapLayerRegistry.instance().addMapLayer(self.newLayer)
-        
     def process(self):
+        '''This is where a lot of the work is done. All the values
+        from the dialog are retrieved, then the TrendMapperProcess 
+        worker thread and the progress bar are set up, connected
+        and then launched'''
         # get all the data from the dialog
         inputLayerName = self.dlg.getInputLayer()
         keyCol = self.dlg.getCategoryCombo()
@@ -226,26 +235,30 @@ class TrendMapper:
         formatDateCol = self.dlg.getDateFormatCheckbok()
         dateCol = self.dlg.getDateFormatCombo()
         dateFormat = self.dlg.getDateFormatText()
-        
         #start progressbar 
         self.dlg.setProgressBar('TrendMapper', '')
-        
-        #set up the rest of the paramters for the worker
+        #set up the rest of the paramters for the worker thread
         layer = getLayerByName(inputLayerName)
         copyAttr.append(keyCol) 
-        self.dlg.ProgressBar(0, 'Finding unique entries in {}'.format(keyCol))
+        self.dlg.ProgressBar(0, 
+                         'Finding unique entries in {}'.format(keyCol))
         stations = getUniqueKeys(layer, keyCol) 
         #create the new layer
-        self.newLayer = createVectorLayer(layer, outputLayerName, copyAttr)
+        self.newLayer = createVectorLayer(layer, outputLayerName, 
+                                          copyAttr)
         #set up the worker thread
-        tmprocess = TrendMapperProcess(self.newLayer, stations, xField, yField, 
-                                copyAttr)
+        tmprocess = TrendMapperProcess(self.newLayer, stations, xField, 
+                                       yField, copyAttr)
         tmprocess.createConvFunction(formatDateCol, dateCol, dateFormat)
         tmprocess.createDataFunction(layer, keyCol, statsCheck)
-        self.dlg.connect(tmprocess, tmprocess.progSig, self.dlg.ProgressBar)
+        #set up thread signal slots
+        self.dlg.connect(tmprocess, tmprocess.progSig, 
+                         self.dlg.ProgressBar)
         self.dlg.connect(tmprocess, tmprocess.stopSig, self.stp)
         self.dlg.connect(tmprocess, tmprocess.msgSig, self.dlg.message)
-        self.dlg.connect(tmprocess, tmprocess.abortSig, self.dlg.ProgressBarClose)
+        self.dlg.connect(tmprocess, tmprocess.abortSig, 
+                         self.dlg.ProgressBarClose)
         self.dlg.abortButton.clicked.connect(tmprocess.abort)
+        #start the worker thread
         tmprocess.start()   
         
