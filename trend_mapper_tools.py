@@ -25,20 +25,21 @@ from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
 from qgis.PyQt.QtCore import QVariant, QPyNullVariant
 from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI 
 from qgis.core import QgsFeatureRequest, QgsField, QgsVectorLayer, QgsFeature
-from qgis.core import QgsGeometry, QgsCoordinateReferenceSystem, QgsMessageLog
+from qgis.core import QgsGeometry, QgsCoordinateReferenceSystem
 from datetime import datetime
+from trend_mapper_log import TrendMapperLogger
 # Initialize Qt resources from file resources.py
 import os.path
 # Set the logger
-log = QgsMessageLog.logMessage
-INFO = 0
-WARNING = 1
-CRITICAL = 2
+log = TrendMapperLogger()
 
 
 
-def makeFeature(dstLayer, feature):
-    '''Copy features form a source vector layer to a target layer. 
+def makeFeature(dstLayer, newFeatureDict):
+    '''
+    
+    
+    Copy features form a source vector layer to a target layer. 
     Only copy features whos value of the keyCol attribute is in the 
     featureList array. When copying the features, only copy the 
     attributes whos name is in the attribute array.
@@ -46,16 +47,19 @@ def makeFeature(dstLayer, feature):
     :param feature is actually a dict
     
     '''
+    # Set the fields for the new feature from the dst layer
     dstFields = dstLayer.pendingFields()
     newFeature = QgsFeature()
     newFeature.setFields(dstFields)
-    if 'GEOMETRY' not in feature:
-        raise KeyError('No geometry in the supplied feature dict')
-    newFeature.setGeometry(feature['GEOMETRY'])
-    for name in feature:
+    # Verify the input dict has all the fields
+    for fieldname in [str(f.name()) for f in dstFields]:
+        if fieldname not in newFeatureDict:
+            log.warn("{} missing from input feature dict")
+    newFeature.setGeometry(newFeatureDict['GEOMETRY'])
+    for name in newFeatureDict:
         if name == 'GEOMETRY':
             continue
-        newFeature[name] = feature[name]
+        newFeature[name] = newFeatureDict[name]
     return newFeature
         
 
@@ -166,8 +170,8 @@ def convertedDatapointGenerator(datapointGen, convertFun, skipOnErr=True):
             dataOut = convertFun(data)
         except Exception as e:
             if skipOnErr:
-                log("Exception in converting data point: {}"\
-                                .format(str(e)), 'TrendMapper', level=WARNING)
+                log.warn("Exception in converting data point: {}"\
+                                .format(str(e)))
                 continue
             else:
                 raise e
