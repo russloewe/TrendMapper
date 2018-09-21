@@ -73,24 +73,27 @@ def makeFeature(dstLayer, newFeatureDict):
         newFeature[name] = newFeatureDict[name]
     return newFeature
         
-
-def addResultFields(layer, result):
-    ''' Add a float field in a layer for each dict key in results param
+def addResultFields(dstLayer, resultDict):
+    ''' Add a QgsField of type double float type for each key in the
+        resultDict.
     
-    :param layer: The layer to add new fields to
-    :layer type: QgVectorLayer
+    :param dstLayer: The layer to add new fields.
+    :type dstLayer: QgVectorLayer
     
-    :param result: A dictionary of results from an analysis function
-    :type result: dict
+    :param resultDict: A dictionary containing the results from an analysis 
+        function. All entries in the resultDict are assumed to be ints or 
+        floats.
+    :type resultDict: dict
     
     :returns: nothing
     '''
-    checkTrue( layer.startEditing() )
-    for i in result:
-        checkTrue(layer.dataProvider().addAttributes([QgsField(i, 
-                                         QVariant.Double)]))
-    layer.updateFields()
-    checkTrue(layer.commitChanges())
+    newFields = []
+    for key in resultDict:
+        newFields.append(QgsField(key, QVariant.Double))
+    checkTrue( dstLayer.startEditing() )
+    checkTrue(dstLayer.dataProvider().addAttributes(newFields))
+    dstLayer.updateFields()
+    checkTrue(dstLayer.commitChanges())
     
 def createVectorLayer(srcLayer, newLayerName, fieldsToCopy):
     '''Create a new vector layer with geometry and selected fields 
