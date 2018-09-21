@@ -6,7 +6,7 @@
  calculate trendlines along catagories
                               -------------------
         begin                : 2018-07-28
-        git sha              : $Format:%H$
+        git sha              : '$Format:%H$'
         copyright            : (C) 2018 by Russell Loewe
         email                : russloewe@gmai.com
  ***************************************************************************/
