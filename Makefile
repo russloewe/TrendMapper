@@ -38,13 +38,13 @@ LOCALES =
 # translation
 SOURCES = \
 	__init__.py \
-	trend_mapper.py trend_mapper_dialog.py analysis.py trend_mapper_tools.py trend_mapper_logger.py trend_mapper_process.py
+	trend_mapper.py trend_mapper_dialog.py analysis.py trend_mapper_tools.py trend_mapper_process.py
 
 PLUGINNAME = TrendMapper
 
 PY_FILES = \
 	__init__.py \
-	trend_mapper.py trend_mapper_dialog.py analysis.py trend_mapper_tools.py trend_mapper_logger.py  trend_mapper_process.py
+	trend_mapper.py trend_mapper_dialog.py analysis.py trend_mapper_tools.py  trend_mapper_process.py
 
 UI_FILES = trend_mapper_dialog_base.ui 
 
@@ -113,6 +113,7 @@ deploy: compile doc transcompile
 	cp -vf $(EXTRAS) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vfr i18n $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vfr $(HELP) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)/help
+	cp -vfr $(HELP)/* ../russloewe.github.io/TrendMapper/docs/
 	# Copy extra directories if any
   # (temporarily removed)
 
