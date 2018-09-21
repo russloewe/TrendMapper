@@ -21,7 +21,7 @@
  ***************************************************************************/
 """
 import os.path
-from qgis.core import QgsMapLayerRegistry, QgsMessageLog
+from qgis.core import QgsMapLayerRegistry
 from PyQt4 import QtGui, uic, QtCore
 # Initialize Qt resources from file resources.py
 import resources
@@ -31,11 +31,9 @@ from trend_mapper_dialog import TrendMapperDialog
 from trend_mapper_process import TrendMapperProcess
 from trend_mapper_logger import TrendMapperLogger
 from trend_mapper_tools import getLayerByName, getUniqueKeys, createVectorLayer
+from trend_mapper_log import TrendMapperLogger
 # Set the logger
-log = QgsMessageLog.logMessage
-INFO = 0
-WARNING = 1
-CRITICAL = 2
+log = TrendMapperLogger()
 
 class TrendMapper:
     """QGIS Plugin Implementation."""
@@ -211,6 +209,7 @@ class TrendMapper:
         allLayers = [layer for layer in layers if layer.type() == 0]
         self.dlg.setLayerInputCombo([layer.name() for layer in allLayers])
         self.dlg.updateAttributeCombos()
+        log.error('test')
         if test_run:
             result = True
         else:
