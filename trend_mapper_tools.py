@@ -53,7 +53,7 @@ def makeFeature(dstLayer, newFeatureDict):
     :return: The new feature object.
     :rtype: QgsFeature
     
-    :todo: See if QFeature has method for adding attributes from a dict.
+    .. todo:: See if QFeature has method for adding attributes from a dict.
     
     '''
     # Set the fields for the new feature from the dst layer
@@ -95,38 +95,49 @@ def addResultFields(dstLayer, resultDict):
     dstLayer.updateFields()
     checkTrue(dstLayer.commitChanges())
     
-def createVectorLayer(srcLayer, newLayerName, fieldsToCopy):
+def createVectorLayer(srcLayer, newLayerName, fieldsToCopy, crs='epsg:27700'):
     '''Create a new vector layer with geometry and selected fields 
-    from a source vector layer
+    from a source vector layer.
     
     :param srcLayer: The layer that we will be copying geometry and 
-        fields from
+        fields from.
     :type srcLayer: QgVectorLayer
     
-    :param name: The name for the new vector layer
-    :type name: str
+    :param newLayerName: The name for the new vector layer.
+    :type newLayerName: str
     
-    :param attributes: An array of attirbute names for which we will
-        be copying the corresponding fields
-    :type attributes: [str]
+    :param fieldsToCopy: An array of attirbute names for which we will
+        be copying the corresponding fields.
+    :type fieldsToCopy: [str]
     
-    :returns: The newly created vector layer
+    :param crs: The crs for the new layer. Defaults to "epsg:27700".
+    :type crs: str
+    
+    :returns: The newly created vector layer.
     :rtype: QgVectorLayer
+    
+    .. todo:: Option to automatically copy crs from source layer.
     '''
-    if newLayerName == '':
-        newLayerName = "{}_new".format(str(srcLayer.name())) 
+    if (newLayerName == '') or (newLayerName is None):
+        log.error('Invalid name for new layer: "{}"'.format(newLayerName))
+        raise ValueError('Invalid layer name: "{}"'.format(newLayerName)) 
     srcFields = srcLayer.pendingFields()
-    newFields = []
-    #make a subset of the source layer fields
-    for i in srcFields:
-        if str(i.name()) in fieldsToCopy:
-            newFields.append(i)
-    #make sure 
-    for name in fieldsToCopy:
-        if name not in [str(i.name()) for i in newFields]:
-            raise AttributeError('Field {} not in new layer'.format(name))
-    #create a new point layer
-    vl = QgsVectorLayer("Point?crs=epsg:27700", newLayerName, "memory")
+    # Make a list of srcField names
+    fieldName = lambda x : str(x.name())
+    srcFieldNames = map(fieldName, srcFields)
+    # Filter out fields that arent in fieldsToCopy
+    ifIn = lambda x : True if fieldName(x) in fieldsToCopy else False 
+    newFields = filter(ifIn, srcFields)
+    # Check that all the fields we wanted were copied
+    ifIn = lambda x : False if x in srcFieldNames else True
+    leftOverFields = filter(ifIn, fieldsToCopy)
+    if len(leftOverFields) != 0:
+        log.error('Fields "{}" not copied to new layer.'\
+                                                     .format(leftOverFields))
+        raise AttributeError('Fields "{}" not copied to new layer.'\
+                                                     .format(leftOverFields))
+    #create a new point layer in memory
+    vl = QgsVectorLayer("Point?crs={}".format(crs), newLayerName, "memory")
     pr = vl.dataProvider()
     #add the subset of fields to the new layer
     checkTrue(vl.startEditing())
@@ -134,31 +145,46 @@ def createVectorLayer(srcLayer, newLayerName, fieldsToCopy):
     checkTrue(vl.commitChanges())
     return vl
     
-def getUniqueKeys(layer, keyCol):
+def getUniqueKeys(srcLayer, keyCol):
     '''Get the list of distinct values from an attribute column
     
-    :param layer: The layer to pull the distinct values from.
-    :type layer: QgVectorLayer
+    :param srcLayer: The layer to pull the distinct values from.
+    :type srcLayer: QgVectorLayer
     
     :param keyCol: The name of the attribute column to pull the unique 
         values from.
     :type keyCol: str
     
-    :returns: List of the distinct values found.
-    :rtype: array
+    :returns: List of the distinct values found as strings.
+    :rtype: [str]
     '''
-    idx = layer.fieldNameIndex(keyCol)
+    idx = srcLayer.fieldNameIndex(keyCol)
     if idx < 0:
+        log.error('Cant get unique values for column "{}"'.format(keyCol))
         raise ValueError('Could not get field index for "{}" on {}'\
-                            .format(keyCol, layer.name()))
-    stations = layer.uniqueValues(idx)
-    stations = map(str, stations) #convert all the entries to strings
+                            .format(keyCol, srcLayer.name()))
+    stations = srcLayer.uniqueValues(idx)
+    stations = map(str, stations) 
     return stations
 
-def featureGenerator(layer, keyName, keyCol):
-    '''Generate features from layer where keyCol equals keyName'''
+def featureGenerator(srcLayer, keyName, keyCol):
+    '''Make a filtered QgsFeatureIterator so features with attribute "keyName"
+    in column "keyCol" are returned.
+    
+    :param srcLayer: The layer to get features from.
+    :type srcLayer: QgsVectorLayer
+    
+    :param keyName: The attribute value to filter features by.
+    :type keyName: str
+    
+    :param keyCol: The name of the feature field to match keyName against.
+    :type keyCol: str
+    
+    :return: A filterd feature iterator
+    :rtype: QgsFeatureiterator
+    '''
     querry = "{} = '{}'".format(keyCol, keyName)
-    featureIter = layer.getFeatures(QgsFeatureRequest().setFilterExpression(querry))
+    featureIter = srcLayer.getFeatures(QgsFeatureRequest().setFilterExpression(querry))
     return featureIter
         
 
