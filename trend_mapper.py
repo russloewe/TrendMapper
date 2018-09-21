@@ -200,6 +200,10 @@ class TrendMapper:
     def run(self, test_run=False):
         """Run method when TrendMapper in launched.
         Sets up and shows dialog and launches TrendMapper.process()
+        
+        :param test_run: Flag to skip showing the dialog widget and
+            running the event loop. Defaults to False.
+        :type test_run: bool
         """
 
         # Give the dialoge the list of layers
