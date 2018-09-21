@@ -6,22 +6,40 @@
 Welcome to TrendMapper's documentation!
 ============================================
 
-Contents:
+Trend Mapper is a QGIS Python plugin that performs linear regression
+analysis for a vector point layer for sets of features grouped by 
+unique values along a chosen field.
 
-.. toctree::
-   :maxdepth: 2
+Source code located at `github.com/russloewe/TrendMapper <https://github.com/russloewe/TrendMapper>`_ .
 
-.. automodule:: trend_mapper
-    :members:
+Trend Mapper
+=============
+
+.. autoclass:: trend_mapper.TrendMapper
+    :members: run, process, stp
     
+    
+Trend Mapper Tools
+==================
+
+A suite of tools for retrieving data from the QGIS interface and for making
+new features and layers
+ 
 .. automodule:: trend_mapper_tools
     :members:
-    
-.. automodule:: trend_mapper_logger
+
+Trend Mapper Dialog
+===================
+
+.. autoclass:: trend_mapper.TrendMapperDialog
     :members:
     
+Analysis Functions
+==================
+   
 .. automodule:: analysis
     :members:
+
     
 Indices and tables
 ==================
