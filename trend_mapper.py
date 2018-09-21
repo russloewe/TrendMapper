@@ -21,7 +21,7 @@
  ***************************************************************************/
 """
 import os.path
-from qgis.core import QgsMapLayerRegistry
+from qgis.core import QgsMapLayerRegistry, QgsMessageLog
 from PyQt4 import QtGui, uic, QtCore
 # Initialize Qt resources from file resources.py
 import resources
@@ -32,8 +32,10 @@ from trend_mapper_process import TrendMapperProcess
 from trend_mapper_logger import TrendMapperLogger
 from trend_mapper_tools import getLayerByName, getUniqueKeys, createVectorLayer
 # Set the logger
-log = TrendMapperLogger()
-
+log = QgsMessageLog.logMessage
+INFO = 0
+WARNING = 1
+CRITICAL = 2
 
 class TrendMapper:
     """QGIS Plugin Implementation."""

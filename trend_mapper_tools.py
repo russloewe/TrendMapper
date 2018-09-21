@@ -21,14 +21,19 @@
 
 
 
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication#, QPyNullVariant
-from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI, QgsFeatureRequest, QgsField, QgsVectorLayer, QgsFeature, QgsGeometry, QgsCoordinateReferenceSystem
+from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
 from qgis.PyQt.QtCore import QVariant, QPyNullVariant
+from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI 
+from qgis.core import QgsFeatureRequest, QgsField, QgsVectorLayer, QgsFeature
+from qgis.core import QgsGeometry, QgsCoordinateReferenceSystem, QgsMessageLog
 from datetime import datetime
 # Initialize Qt resources from file resources.py
 import os.path
-from trend_mapper_logger import TrendMapperLogger
-log = TrendMapperLogger()
+# Set the logger
+log = QgsMessageLog.logMessage
+INFO = 0
+WARNING = 1
+CRITICAL = 2
 
 
 
@@ -41,8 +46,6 @@ def makeFeature(dstLayer, feature):
     :param feature is actually a dict
     
     '''
-    log.debug('makeFeature("{}", "{}")'\
-                    .format(dstLayer, feature))
     dstFields = dstLayer.pendingFields()
     newFeature = QgsFeature()
     newFeature.setFields(dstFields)
@@ -53,10 +56,6 @@ def makeFeature(dstLayer, feature):
         if name == 'GEOMETRY':
             continue
         newFeature[name] = feature[name]
-    #for field in newFeature.fields():
-       # name = str(field.name())
-       # attrVal = feature[name]
-       # newFeature[name] = attrVal
     return newFeature
         
 
@@ -71,7 +70,6 @@ def addResultFields(layer, result):
     
     :returns: nothing
     '''
-    log.debug('call({},{})'.format(layer, result))
     checkTrue( layer.startEditing() )
     for i in result:
         checkTrue(layer.dataProvider().addAttributes([QgsField(i, 
@@ -99,8 +97,6 @@ def createVectorLayer(srcLayer, newLayerName, fieldsToCopy):
     '''
     if newLayerName == '':
         newLayerName = "{}_new".format(str(srcLayer.name())) 
-    log.debug('call("{}", "{}", "{}")'.format(srcLayer, newLayerName,
-                                                        fieldsToCopy))
     srcFields = srcLayer.pendingFields()
     newFields = []
     #make a subset of the source layer fields
@@ -133,20 +129,16 @@ def getUniqueKeys(layer, keyCol):
     :returns: List of the distinct values found.
     :rtype: array
     '''
-    log.debug('call("{}", "{}")'.format(layer, keyCol))
     idx = layer.fieldNameIndex(keyCol)
     if idx < 0:
         raise ValueError('Could not get field index for "{}" on {}'\
                             .format(keyCol, layer.name()))
     stations = layer.uniqueValues(idx)
     stations = map(str, stations) #convert all the entries to strings
-    log.debug(':getUniqueKeys return: {}'.format(stations))
     return stations
 
 def featureGenerator(layer, keyName, keyCol):
     '''Generate features from layer where keyCol equals keyName'''
-    log.debug('featureGenerator({}, {}, {})'.format(str(layer.name()), 
-                                                    keyName, keyCol))
     querry = "{} = '{}'".format(keyCol, keyName)
     featureIter = layer.getFeatures(QgsFeatureRequest().setFilterExpression(querry))
     return featureIter
@@ -154,8 +146,6 @@ def featureGenerator(layer, keyName, keyCol):
 
 def datapointGenerator(featureGenerator, attList):
     '''pull attributes in the attList from a feature and yield a dict'''
-    log.debug("datapointGenerator({}, {})".format(featureGenerator,
-                                                    attList))
     for feature in featureGenerator:
         result = {}
         for key in attList:
@@ -165,23 +155,19 @@ def datapointGenerator(featureGenerator, attList):
 
 def filterDatapointGenerator(datapointGen, filterFun):
     '''only yield data points where filter fun is true'''
-    log.debug("filterDatapointGenerator({}, {})".format( datapointGen, 
-                                                  filterFun.__name__))
     for data in datapointGen:
         if filterFun(data):
             yield data
 
 def convertedDatapointGenerator(datapointGen, convertFun, skipOnErr=True):
     '''Take stream of data points and apply a function to each then yield'''
-    log.debug('mapDatapointGenerator({}, {})'.format(datapointGen, 
-                                                convertFun.__name__))
     for data in datapointGen:
         try:
             dataOut = convertFun(data)
         except Exception as e:
             if skipOnErr:
-                log.warning("Exception in converting data point: {}"\
-                                .format(str(e)))
+                log("Exception in converting data point: {}"\
+                                .format(str(e)), 'TrendMapper', level=WARNING)
                 continue
             else:
                 raise e
@@ -189,7 +175,6 @@ def convertedDatapointGenerator(datapointGen, convertFun, skipOnErr=True):
 
 def organizeData(datapointGen, dataAttr):
     '''collect data and organize data into x number of arrays'''
-    log.debug("organizeData({}, {})".format(datapointGen, dataAttr))
     dataset = {}
     #make a dict of empty lists for each dataAttr
     for key in dataAttr:
@@ -212,7 +197,6 @@ def getLayerByName(name):
     :returns: The layer object.
     :rtype: QgsVectorLayer
     '''
-    log.debug('call("{}")'.format(name))
     layer=None
     for lyr in QgsMapLayerRegistry.instance().mapLayers().values():
         if lyr.name() == name:

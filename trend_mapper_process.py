@@ -28,6 +28,11 @@ from PyQt4.QtSql import QSqlDatabase
 from PyQt4 import QtGui, uic, QtCore
 from analysis import calculateLinearRegression #this needs to be param
 from trend_mapper_tools import *
+# Set the logger
+log = QgsMessageLog.logMessage
+INFO = 0
+WARNING = 1
+CRITICAL = 2
 
 class TrendMapperProcess(QThread):
     def __init__(self, newLayer, stations, xField, yField, copyAttr):
