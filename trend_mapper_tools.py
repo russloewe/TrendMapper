@@ -37,25 +37,36 @@ log = TrendMapperLogger()
 
 def makeFeature(dstLayer, newFeatureDict):
     '''
-    
-    
     Copy features form a source vector layer to a target layer. 
     Only copy features whos value of the keyCol attribute is in the 
     featureList array. When copying the features, only copy the 
     attributes whos name is in the attribute array.
     
-    :param feature is actually a dict
+    :param dstLayer: The layer for which the new feature's fields will be 
+        taken from.
+    :type dstLayer: QgsVectorLayer
+    
+    :param newFeatureDict: Dictionary with the attributes to be assigned 
+        to the new feature. Dictionary keys are the string name for the field.
+    :type newFeatureDict: Dict
+    
+    :return: The new feature object.
+    :rtype: QgsFeature
+    
+    :todo: See if QFeature has method for adding attributes from a dict.
     
     '''
     # Set the fields for the new feature from the dst layer
     dstFields = dstLayer.pendingFields()
     newFeature = QgsFeature()
     newFeature.setFields(dstFields)
-    # Verify the input dict has all the fields
+    # Verify the input dict has all the fields and warn if not
     for fieldname in [str(f.name()) for f in dstFields]:
         if fieldname not in newFeatureDict:
             log.warn("{} missing from input feature dict")
+    # Geometry is assigned differently than other attributes
     newFeature.setGeometry(newFeatureDict['GEOMETRY'])
+    # Copy attr to new feature object
     for name in newFeatureDict:
         if name == 'GEOMETRY':
             continue
