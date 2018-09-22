@@ -189,32 +189,77 @@ def featureGenerator(srcLayer, keyName, keyCol):
         
 
 def datapointGenerator(featureGenerator, attList):
-    '''pull attributes in the attList from a feature and yield a dict'''
+    '''Make a generator that takes features from a feature iterator object
+    and yields datapoints as a dict for  the desired attributes given in 
+    attList.
+    
+    :param featureGenerator: The feature souce.
+    :type featureGenerator: QgsFeatureIterator
+    
+    :param attList: A list of attribute fields we want to extract.
+    :type attList: [str]
+    
+    :return: A datapoint iterator.
+    :rtype: generator object
+    '''
     for feature in featureGenerator:
         result = {}
         for key in attList:
             result[key] = feature[key]
-        result['GEOMETRY'] = feature.geometryAndOwnership() #using just .geometry() causes segfault down the line
+        # Using .geometry() causes segfault down the line
+        result['GEOMETRY'] = feature.geometryAndOwnership() 
         yield result
 
 def filterDatapointGenerator(datapointGen, filterFun):
-    '''only yield data points where filter fun is true'''
+    '''Makes a generator that filters the output from a datapointGenertor
+    using the supplied function: filterFun. If filterFun(datapoint) returns
+    True the datapoint is yielded, and if it returns False the datapoint is
+    skipped.
+    
+    :param datapointGen: A generator object produced from the 
+        datapointGenerator() function.
+    :type datapointGen: generator object
+    
+    :param filterFun: A function that takes a dict and returns a bool.
+    :type filterFun: function
+    
+    :return: A filtered datapoint generator.
+    :rtype: generator object
+    '''
     for data in datapointGen:
         if filterFun(data):
             yield data
 
 def convertedDatapointGenerator(datapointGen, convertFun, skipOnErr=True):
-    '''Take stream of data points and apply a function to each then yield'''
+    '''Makes a generator that converts the output from a datapoint
+    generator using the supplied function: convertFun.
+    
+    :param datapointGen: A generator object produced from the 
+        datapointGenerator() function.
+    :type datapointGen: generator object
+    
+    :param convertFun: A function that takes a dict and returns a dict.
+    :type convertFun: function
+    
+    :param skipOnErr: Flag, if True skip when convertFun raises an 
+        exception and pass a warning to the logger. If false, raise 
+        an exception. Default to True.
+    :type skipOnErr: bool
+    
+    :return: Datapoint generator.
+    :rtype: generator object
+    '''
     for data in datapointGen:
         try:
             dataOut = convertFun(data)
         except Exception as e:
             if skipOnErr:
-                log.warn("Exception in converting data point: {}"\
-                                .format(str(e)))
+                log.warn('Exception converting datapoint {}: {}.'\
+                                            .format(data, e))
                 continue
             else:
-                raise e
+                raise Exception('Exception converting datapoint {}: {}.'\
+                                            .format(data, e))
         yield dataOut
 
 def organizeData(datapointGen, dataAttr):
