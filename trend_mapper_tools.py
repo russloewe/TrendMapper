@@ -263,7 +263,22 @@ def convertedDatapointGenerator(datapointGen, convertFun, skipOnErr=True):
         yield dataOut
 
 def organizeData(datapointGen, dataAttr):
-    '''collect data and organize data into x number of arrays'''
+    '''Collect the data from a datapoint generator and organize all the 
+    points from the datapoint generator into one dict. The attributes for the
+    datapoints that are in dataAttr are organized as lists and the rest are 
+    only retrived from the first datapoint.
+    
+    :param datapointGen: A generator object produced from the 
+        datapointGenerator() function.
+    :type datapointGen: generator object
+    
+    :param dataAttr: A list of the attributes that are to be collected as 
+        lists.
+    :type dataAttr: [str]
+    
+    :return: A dataset organized into a dict.
+    :rtype: dict
+    '''
     dataset = {}
     #make a dict of empty lists for each dataAttr
     for key in dataAttr:
