@@ -219,26 +219,6 @@ class ToolsTest(unittest.TestCase):
             conv = convertedDatapointGenerator(filtered, convFunNum(['DATE', 'TAVG']), skipOnErr = True)
             
             data = organizeData(conv, ['DATE', 'TAVG'])
-
-    def test_mergeDict(self):
-        '''Test the merge dict function'''
-        dica = { 'a' : 1, 'b' : ['a', 'b'], 'e' : 2}
-        dicb = { 'c': 'one', 'd' : 2}
-        dicc = {'a' : 3, 'b' : 3, 'd' : 2}
-        
-        result = mergeDicts(dica, dicb, excluded = ['e', 'd'])
-        self.assertEqual(result['a'], 1)
-        self.assertEqual(result['b'], ['a', 'b'])
-        self.assertEqual(result['c'], 'one')
-        self.assertTrue('e' not in result)
-        self.assertTrue('d' not in result)
-        try:
-            result2 = mergeDicts(dica, dicc)
-        except KeyError:
-            pass
-        else:
-            self.fail('There should have been a keyerror for dict'\
-                      ' key value confliction')
     
     def test_createVectorLayer(self):
         '''Test createVectorLayer function'''
@@ -254,9 +234,13 @@ class ToolsTest(unittest.TestCase):
     def test_createVectorLayer_noname(self):
         '''Test the createVectorLayer with no name provided'''
         attr = ['station', 'date', 'longitude']
-        newLayer = createVectorLayer(self.layer_yearly, '', attr)
-        self.assertEqual(str(newLayer.name()), 'test_noaa_yearly_new')
-        
+        try:
+            newLayer = createVectorLayer(self.layer_yearly, '', attr)
+        except ValueError:
+            pass
+        else:
+            self.fail('There should have been a ValueError')
+            
     def test_createVectorLayer_wrongCol(self):
         '''Test createVectorLayer with wrong column name'''
         attr = ['---station', '---date', '---longitude']

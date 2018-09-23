@@ -19,8 +19,6 @@
  # *                                                                         *
  # ***************************************************************************/
 
-
-
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
 from qgis.PyQt.QtCore import QVariant, QPyNullVariant
 from qgis.core import QgsMapLayerRegistry, QgsDataSourceURI 
@@ -293,38 +291,35 @@ def organizeData(datapointGen, dataAttr):
                 dataset[key] = data[key]
     return dataset
         
-def getLayerByName(name):
+def getLayerByName(layerName):
     '''Find the layer object in the map registry by the string name
     
-    :param name: The name of the layer to find.
+    :param layerName: The name of the layer to find in the QgisMapRegistray.
+    :type layerName: str
+    
     
     :returns: The layer object.
     :rtype: QgsVectorLayer
     '''
     layer=None
     for lyr in QgsMapLayerRegistry.instance().mapLayers().values():
-        if lyr.name() == name:
+        if lyr.name() == layerName:
             return lyr
-    raise AttributeError('Could not find layer: "{}"'.format(name))
+    log.error('Could not find layer: "{}"'.format(layerName))
+    raise AttributeError('Could not find layer: "{}"'.format(layerName))
             
 def checkTrue(result):
+    '''A quick helper function to make sure that a function returns True.
+    Mainly used to wrap QgsVectorLayer.startEditing() so our program raises
+    an exception when we cant edit a layer.
+    
+    :param result: The result from a function that returns True or False.
+    :type result: bool
+    '''
     if  result == False:
         raise ValueError('Function returned False')
     elif result != True:
         raise ValueError('Function returned not True or False')
-        
-def mergeDicts(x, y, excluded=[]):
-    for key in x:
-        if key in y:
-            raise KeyError('Conflicting dict keys')
-    z = {}
-    for key in x:
-        if key not in excluded:
-            z[key] = x[key]
-    for key in y:
-        if key not in excluded:
-            z[key] = y[key]
-    return z
 
 def filterFun(point):
     for key in point:
