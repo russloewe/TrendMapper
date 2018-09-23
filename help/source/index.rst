@@ -12,6 +12,8 @@ unique values along a chosen field.
 
 Source code located at `github.com/russloewe/TrendMapper <https://github.com/russloewe/TrendMapper>`_ .
 
+.. toctree::
+
 Trend Mapper
 =============
 
@@ -24,22 +26,40 @@ Trend Mapper Tools
 
 A suite of tools for retrieving data from the QGIS interface and for making
 new features and layers
- 
-.. automodule:: trend_mapper_tools
-    :members:
 
+Feature, Field and Layer tools
+-------------------------------
+.. automodule:: trend_mapper_tools
+    :members: addResultFields, createVectorLayer, getLayerByName, getUniqueKeys, makeFeature
+
+Data Generators
+---------------
+
+.. automodule:: trend_mapper_tools
+    :members: convertedDatapointGenerator, datapointGenerator, featureGenerator, filterDatapointGenerator, organizeData
+
+Misc Tools
+-----------
+
+.. automodule:: trend_mapper_tools
+    :members: checkTrue, filterFun, ConvFunNum
+    
 Trend Mapper Dialog
 ===================
 
 .. autoclass:: trend_mapper.TrendMapperDialog
     :members:
-    
+
 Analysis Functions
 ==================
    
 .. automodule:: analysis
     :members:
 
+Todo
+====
+
+.. todolist::
     
 Indices and tables
 ==================
