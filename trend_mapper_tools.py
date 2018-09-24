@@ -349,3 +349,16 @@ def convFunNum(attr, dateColumn=None, dateFormat=None):
                     point[key] = str(point[key])
             return point
     return fun
+    
+def mergeDicts(x, y, excluded=[]):
+    for key in x:
+        if key in y:
+            raise KeyError('Conflicting dict keys')
+    z = {}
+    for key in x:
+        if key not in excluded:
+            z[key] = x[key]
+    for key in y:
+        if key not in excluded:
+            z[key] = y[key]
+    return z
