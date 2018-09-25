@@ -137,6 +137,10 @@ class TrendMapperDialog(QtGui.QDialog, FORM_CLASS):
     def message(self, message):
         '''push a message to the status bar'''
         self.iface.messageBar().pushMessage('Info', message)
+    
+    def errmsg(self, message):
+        '''Slot for the trendmapper thread error signal'''
+        self.iface.messageBar().pushMessage('Thread Error:', message, level=2)
         
     def setProgressBar(self, main, text, maxVal=100):
         '''Create a message bar widget, add a progress bar and abort
