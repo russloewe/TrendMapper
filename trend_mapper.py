@@ -258,6 +258,7 @@ class TrendMapper:
                          self.dlg.ProgressBar)
         self.dlg.connect(tmprocess, tmprocess.stopSig, self.stp)
         self.dlg.connect(tmprocess, tmprocess.msgSig, self.dlg.message)
+        self.dlg.connect(tmprocess, tmprocess.errSig, self.dlg.errmsg)
         self.dlg.connect(tmprocess, tmprocess.abortSig,
                          self.dlg.ProgressBarClose)
         self.dlg.abortButton.clicked.connect(tmprocess.abort)
