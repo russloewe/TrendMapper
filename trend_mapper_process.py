@@ -48,13 +48,18 @@ class TrendMapperProcess(QThread):
         self.progSig = QtCore.SIGNAL("progress")
         self.msgSig = QtCore.SIGNAL ("msgSignal")
         self.abortSig = QtCore.SIGNAL('abortSignal')
+        self.errSig = QtCore.SIGNAL('errSignal')
 
             
     def abort(self):
         self.running = False
         self.emit(self.abortSig)
         self.emit(self.msgSig, 'Abort Called')
-        
+    
+    def error(self, e):
+        self.emit(self.abortSig)
+        self.emit(self.errSig, str(e))
+        return
             
     def createConvFunction(self, formatDateCol, dateCol, dateForm):
         if formatDateCol:
@@ -83,6 +88,12 @@ class TrendMapperProcess(QThread):
         self.getData = getdata
         
     def run(self):
+        try:
+            self.workloop()
+        except Exception as e:
+            self.error(e)
+            
+    def workloop(self):
         newFeatures = []
         self.firstRun = True
         for station in self.stations:
@@ -91,6 +102,7 @@ class TrendMapperProcess(QThread):
             else:
                 self.process(station)
         self.emit(self.stopSig)
+    
         
     def process(self, station):
         self.counter += 1
