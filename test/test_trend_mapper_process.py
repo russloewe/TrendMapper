@@ -41,7 +41,7 @@ def convFun(point):
     return point
 
 class ProcessTest(unittest.TestCase):
-    """Test dialog works."""
+    """Test the trend mapper process thread."""
 
     def setUp(self):
         """Runs before each test."""
@@ -60,10 +60,20 @@ class ProcessTest(unittest.TestCase):
     def tearDown(self):
         """Runs after each test."""
 
-    def test_getUniqueValues(self):
-        '''Test getUniqueValues'''
-        pass
-    
+    def test_initTrendMapperProcess(self):
+        '''Test that we can create a TrendMapperProcess object'''
+        tmp = TrendMapperProcess(self.layer_yearly,
+                             ['USC00393316', 'USW00094040', 'USC00126420'], 
+                                                        'DATE', 'TAVG', [])
+        self.assertEqual(tmp.running, True)
+        self.assertEqual(tmp.totalCounter, 3)
+        
+    def test_process(self):
+        '''Test the TrendMapperProcess.processSe() function.'''
+        tmp = TrendMapperProcess(self.layer_yearly,
+                             ['USC00393316', 'USW00094040', 'USC00126420'], 
+                                                        'DATE', 'TAVG', [])
+        tmp.processSet('USC00393316')
         
 if __name__ == "__main__":
     suite = unittest.makeSuite(ProcessTest)
