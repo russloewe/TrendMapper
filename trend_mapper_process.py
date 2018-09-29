@@ -33,9 +33,46 @@ from trend_mapper_log import TrendMapperLogger
 log = TrendMapperLogger()
 
 class TrendMapperProcess(QThread):
+    '''A QT thread that does the main work for the plugin.
+    
+        **Signals**:
+            - stopSig: Emit when the thread stops normally.
+            - abortSig: Emit when the thread is told to stop early.
+            - errSig: Emit when the thread stops from an error.
+            - progSig: Emit when the thread updates the progress bar.
+            - msgSig: Emit when the thread has a message for the message bar. 
+            
+        :param newLayer: The target layer for that the results of the 
+            analysis.
+        :type newLayer: QgsVectorLayer
+        
+        :param stations: The list of "stations" that we are analyzing
+        :type stations: [str]
+        
+        :param xField: The name of the field for the independent variable 
+            for the analysis.
+        :type xField: str
+        
+        :param yField: The name of the field for the dependent variable 
+            for analysis.
+        :type yField: str
+        
+        :param copyAttr: A list of the other fields that are being copied to 
+            the target layer.
+        :type copyAttr: [str] 
+        '''
+
+    stopSig = QtCore.SIGNAL("stopSignal")
+    progSig = QtCore.SIGNAL("progress")
+    msgSig = QtCore.SIGNAL ("msgSignal")
+    abortSig = QtCore.SIGNAL('abortSignal')
+    errSig = QtCore.SIGNAL('errSignal')
+    counter = 0
+    running = True
+    
     def __init__(self, newLayer, stations, xField, yField, copyAttr):
+
         super(TrendMapperProcess, self).__init__()
-        self.counter = 0
         self.totalCounter = len(stations)
         self.stations = stations
         self.copyAttr = copyAttr
@@ -43,15 +80,11 @@ class TrendMapperProcess(QThread):
         self.xField = xField
         self.yField = yField
         self.newLayer = newLayer
-        self.running = True
-        self.stopSig = QtCore.SIGNAL("stopSignal")
-        self.progSig = QtCore.SIGNAL("progress")
-        self.msgSig = QtCore.SIGNAL ("msgSignal")
-        self.abortSig = QtCore.SIGNAL('abortSignal')
-        self.errSig = QtCore.SIGNAL('errSignal')
+        
 
             
     def abort(self):
+        '''Tell the thread to stop running and send out an abort signal'''
         self.running = False
         self.emit(self.abortSig)
         self.emit(self.msgSig, 'Abort Called')
@@ -88,12 +121,17 @@ class TrendMapperProcess(QThread):
         self.getData = getdata
         
     def run(self):
+        ''' Just call the woorkloop. Catch any error and emit an error signal.
+        '''
         try:
             self.workloop()
         except Exception as e:
             self.error(e)
             
     def workloop(self):
+        '''Iterate through the list of "stations", calling the process 
+        function for each "stations".
+        ''' 
         newFeatures = []
         self.firstRun = True
         for station in self.stations:
