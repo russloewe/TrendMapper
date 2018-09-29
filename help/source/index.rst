@@ -19,6 +19,13 @@ Trend Mapper
     :members: run, process, stp
     
     
+Trend Mapper Process
+====================
+    
+.. autoclass:: trend_mapper.TrendMapperProcess
+    :members:
+    
+    
 Trend Mapper Tools
 ==================
 
