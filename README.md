@@ -2,7 +2,7 @@
 TrendMapper is a QGIS Python plugin to make it easier to batch analyze NOAA weather station data for time dependent linear 
 trends. 
 
-![Trendmapper Screenshot1](https://russloewe.github.io/TrendMapper/pics/trendmapper_whole.png)
+![Trendmapper Screenshot1](https://raw.githubusercontent.com/russloewe/TrendMapper/master/trendmapper_screencap.png)
 
 With TrendMapper you can load a vector or CSV layer with data from multiple weather stations over multiple 
 dates into QGIS and produce a vector layer that shows the linear regression for each station for a chosen data column. 
